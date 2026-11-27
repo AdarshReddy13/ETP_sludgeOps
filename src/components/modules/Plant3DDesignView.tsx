@@ -22,6 +22,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
   Box,
   Eye,
@@ -228,6 +230,7 @@ export const Plant3DDesignView: React.FC = () => {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const meshesRef = useRef<Map<string, THREE.Object3D>>(new Map());
   const labelElsRef = useRef<Map<string, HTMLButtonElement | HTMLDivElement>>(new Map());
   const particlesRef = useRef<THREE.Points | null>(null);
@@ -247,8 +250,8 @@ export const Plant3DDesignView: React.FC = () => {
     scene.fog = new THREE.FogExp2(skyColor, 0.0085);
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.5, 320);
-    camera.position.set(-28, 22, 28);
-    camera.lookAt(-5, 2, 1);
+    camera.position.set(1.5, 10.0, 23.5);
+    camera.lookAt(-1.5, 2.8, 0.5);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -257,8 +260,16 @@ export const Plant3DDesignView: React.FC = () => {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = isNightMode ? 1.05 : 1.12;
+    renderer.toneMappingExposure = isNightMode ? 1.05 : 1.05;
     rendererRef.current = renderer;
+
+    // Physically Based Environment Reflections (makes steel, glass, and water look real!)
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const roomEnv = new RoomEnvironment();
+    const envRT = pmremGenerator.fromScene(roomEnv, 0.04);
+    scene.environment = envRT.texture;
+    roomEnv.dispose();
+    pmremGenerator.dispose();
 
     container.appendChild(renderer.domElement);
 
@@ -304,62 +315,89 @@ export const Plant3DDesignView: React.FC = () => {
       return tex;
     };
 
-    const concreteTex = makeTexture('#94a3b8', 'rgba(255,255,255,0.08)', 'rgba(15,23,42,0.12)', true, 3, 3);
-    const darkConcreteTex = makeTexture('#64748b', 'rgba(255,255,255,0.06)', 'rgba(0,0,0,0.18)', true, 2, 2);
-    const steelPanelTex = makeTexture('#475569', 'rgba(255,255,255,0.05)', 'rgba(0,0,0,0.15)', true, 4, 3);
-    const asphaltTex = makeTexture('#272b33', 'rgba(255,255,255,0.05)', 'rgba(0,0,0,0.25)', false, 8, 2);
+    const concreteTex = makeTexture('#9ca3af', 'rgba(255,255,255,0.09)', 'rgba(15,23,42,0.18)', true, 3, 3);
+    const darkConcreteTex = makeTexture('#374151', 'rgba(255,255,255,0.05)', 'rgba(0,0,0,0.28)', true, 2, 2);
+    const steelPanelTex = makeTexture('#2b3038', 'rgba(255,255,255,0.04)', 'rgba(0,0,0,0.22)', true, 6, 4);
+    const asphaltTex = makeTexture('#3f434a', 'rgba(255,255,255,0.06)', 'rgba(0,0,0,0.32)', false, 10, 4);
 
     const concreteMat = new THREE.MeshStandardMaterial({
       map: concreteTex,
-      roughness: 0.88,
-      metalness: 0.05,
+      bumpMap: concreteTex,
+      bumpScale: 0.1,
+      roughness: 0.9,
+      metalness: 0.04,
       wireframe: isWireframe,
     });
     const darkConcreteMat = new THREE.MeshStandardMaterial({
       map: darkConcreteTex,
-      roughness: 0.85,
-      metalness: 0.08,
+      bumpMap: darkConcreteTex,
+      bumpScale: 0.12,
+      roughness: 0.88,
+      metalness: 0.06,
       wireframe: isWireframe,
     });
     const steelMat = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      roughness: 0.38,
-      metalness: 0.72,
+      color: 0x64748b,
+      roughness: 0.32,
+      metalness: 0.82,
+      envMapIntensity: 1.25,
+      wireframe: isWireframe,
+    });
+    const charcoalCladdingMat = new THREE.MeshStandardMaterial({
+      map: steelPanelTex,
+      bumpMap: steelPanelTex,
+      bumpScale: 0.08,
+      color: 0x3f4652,
+      roughness: 0.55,
+      metalness: 0.52,
+      envMapIntensity: 0.9,
       wireframe: isWireframe,
     });
     const claddingMat = new THREE.MeshStandardMaterial({
       map: steelPanelTex,
+      bumpMap: steelPanelTex,
+      bumpScale: 0.06,
       color: 0xcbd5e1,
       roughness: 0.45,
       metalness: 0.55,
+      envMapIntensity: 1.0,
+      wireframe: isWireframe,
+    });
+    const safetyOrangeMat = new THREE.MeshStandardMaterial({
+      color: 0xea580c,
+      roughness: 0.4,
+      metalness: 0.3,
       wireframe: isWireframe,
     });
     const safetyYellowMat = new THREE.MeshStandardMaterial({
       color: 0xf59e0b,
-      roughness: 0.35,
-      metalness: 0.35,
+      roughness: 0.38,
+      metalness: 0.32,
       wireframe: isWireframe,
     });
     const glassMat = new THREE.MeshStandardMaterial({
-      color: isNightMode ? 0xfef08a : 0x38bdf8,
-      emissive: isNightMode ? 0xf59e0b : 0x0284c7,
-      emissiveIntensity: isNightMode ? 0.55 : 0.15,
-      roughness: 0.15,
-      metalness: 0.8,
+      color: isNightMode ? 0xfef08a : 0x1e293b,
+      emissive: isNightMode ? 0xf59e0b : 0x0f172a,
+      emissiveIntensity: isNightMode ? 0.65 : 0.08,
+      roughness: 0.1,
+      metalness: 0.9,
+      envMapIntensity: 1.6,
     });
     const waterMat = new THREE.MeshStandardMaterial({
-      color: 0x0369a1,
-      roughness: 0.12,
-      metalness: 0.4,
-      transparent: true,
-      opacity: 0.86,
-    });
-    const darkWaterMat = new THREE.MeshStandardMaterial({
-      color: 0x1e3a5f,
-      roughness: 0.18,
-      metalness: 0.3,
+      color: 0x1e293b,
+      roughness: 0.04,
+      metalness: 0.78,
+      envMapIntensity: 1.9,
       transparent: true,
       opacity: 0.9,
+    });
+    const darkWaterMat = new THREE.MeshStandardMaterial({
+      color: 0x111827,
+      roughness: 0.08,
+      metalness: 0.65,
+      envMapIntensity: 1.5,
+      transparent: true,
+      opacity: 0.92,
     });
 
     // 2. Realistic Industrial Lighting
@@ -384,12 +422,12 @@ export const Plant3DDesignView: React.FC = () => {
     dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
-    // 3. Industrial Site Ground, Concrete Apron & Haulage Road
+    // 3. Industrial Site Ground (Natural Earth/Grass), Concrete Apron & Haulage Road
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(110, 90),
+      new THREE.PlaneGeometry(140, 120),
       new THREE.MeshStandardMaterial({
-        color: isNightMode ? 0x0b111d : 0x9ca3af,
-        roughness: 0.95,
+        color: isNightMode ? 0x0c1410 : 0x5c6b57,
+        roughness: 0.96,
         metalness: 0.02,
       })
     );
@@ -524,40 +562,80 @@ export const Plant3DDesignView: React.FC = () => {
     scene.add(eqGroup);
     meshes.set('unit-eq', eqGroup);
 
-    // B. FM-201: Flash Mix Coagulation Tank + Overhead Motor M-201 + Dosing Skid
+    // B. FM-201: Flash Mix Coagulation Tank (Weathered Dark Concrete + Plinth + Galvanized Top Deck + Blue Gearmotor)
     const fmGroup = new THREE.Group();
     fmGroup.position.set(-8, 0.35, 8);
-    buildRectTank(fmGroup, 3.8, 4.0, 3.8, 0.35, waterMat);
+    // Concrete base plinth
+    const fmPlinth = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.6, 4.4), concreteMat);
+    fmPlinth.position.y = 0.3;
+    fmPlinth.receiveShadow = true;
+    fmGroup.add(fmPlinth);
 
-    const fmBeam = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.25, 0.9), steelMat);
-    fmBeam.position.set(0, 4.15, 0);
-    fmGroup.add(fmBeam);
-    const fmMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.1, 16), new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.65, roughness: 0.25 }));
-    fmMotor.position.set(0, 4.85, 0);
+    // Dark weathered concrete tank body
+    const fmTank = new THREE.Group();
+    fmTank.position.y = 0.6;
+    const fmWalls: [number, number, number, number, number, number][] = [
+      [3.8, 3.6, 0.35, 0, 1.8, 1.72],
+      [3.8, 3.6, 0.35, 0, 1.8, -1.72],
+      [0.35, 3.6, 3.1, -1.72, 1.8, 0],
+      [0.35, 3.6, 3.1, 1.72, 1.8, 0],
+    ];
+    fmWalls.forEach(([bw, bh, bd, bx, by, bz]) => {
+      const w = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), darkConcreteMat);
+      w.position.set(bx, by, bz);
+      w.castShadow = true;
+      w.receiveShadow = true;
+      fmTank.add(w);
+    });
+    const fmLiq = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.15, 3.0), darkWaterMat);
+    fmLiq.position.y = 3.1;
+    fmTank.add(fmLiq);
+    fmGroup.add(fmTank);
+
+    // Galvanized grating platform + perimeter handrails on top (matching reference photo!)
+    const fmDeck = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.15, 3.9), steelMat);
+    fmDeck.position.y = 4.28;
+    fmGroup.add(fmDeck);
+    addHandrail(fmGroup, -1.85, 4.35, 1.85, 1.85, 1.85);
+    addHandrail(fmGroup, -1.85, 4.35, -1.85, 1.85, -1.85);
+    addHandrail(fmGroup, -1.85, 4.35, -1.85, -1.85, 1.85);
+    addHandrail(fmGroup, 1.85, 4.35, -1.85, 1.85, 1.85);
+
+    // Bright industrial blue vertical gearmotor M-201
+    const fmGearbox = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.75, 0.65), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6, roughness: 0.25 }));
+    fmGearbox.position.set(0, 4.7, 0);
+    fmGearbox.castShadow = true;
+    fmGroup.add(fmGearbox);
+    const fmMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.95, 16), new THREE.MeshStandardMaterial({ color: 0x0369a1, metalness: 0.65, roughness: 0.22 }));
+    fmMotor.position.set(0, 5.45, 0);
     fmMotor.castShadow = true;
     fmGroup.add(fmMotor);
 
-    // Coagulant chemical dosing tank beside FM-201
-    const chemTank = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 2.2, 18), new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4 }));
-    chemTank.position.set(0, 1.1, 3.0);
-    chemTank.castShadow = true;
-    fmGroup.add(chemTank);
+    // Electrical junction box & steel conduit on side
+    const jBox = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.55, 0.22), steelMat);
+    jBox.position.set(0.9, 1.5, 1.98);
+    fmGroup.add(jBox);
 
     scene.add(fmGroup);
     meshes.set('unit-fm', fmGroup);
 
-    // C. FL-202: Flocculation Chamber (Baffled Tank + Paddle Drive)
+    // C. FL-202: Flocculation Chamber (Weathered Concrete Tank on Plinth + Conduit + Baffles)
     const flGroup = new THREE.Group();
     flGroup.position.set(-2, 0.35, 8);
-    buildRectTank(flGroup, 5.4, 3.8, 4.6, 0.35, waterMat);
-
-    // Internal baffle walls visible in tank
+    const flPlinth = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.6, 5.0), concreteMat);
+    flPlinth.position.y = 0.3;
+    flPlinth.receiveShadow = true;
+    flGroup.add(flPlinth);
+    const flTankWrap = new THREE.Group();
+    flTankWrap.position.y = 0.6;
+    buildRectTank(flTankWrap, 5.4, 3.2, 4.6, 0.35, waterMat);
     [-1.2, 0, 1.2].forEach(bx => {
-      const baffle = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.2, 3.8), darkConcreteMat);
-      baffle.position.set(bx, 1.6, 0);
-      flGroup.add(baffle);
+      const baffle = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.7, 3.8), darkConcreteMat);
+      baffle.position.set(bx, 1.35, 0);
+      flTankWrap.add(baffle);
     });
-    const flBridge = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.22, 1.0), steelMat);
+    flGroup.add(flTankWrap);
+    const flBridge = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.2, 1.0), steelMat);
     flBridge.position.set(0, 3.9, 0);
     flGroup.add(flBridge);
     const flMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.85, 14), steelMat);
@@ -635,134 +713,118 @@ export const Plant3DDesignView: React.FC = () => {
     scene.add(thkGroup);
     meshes.set('unit-thk', thkGroup);
 
-    // F. DWB-501: Dewatering Press Building (3-Story Power-Plant Concrete/Steel Hall + External Staircase + Rooftop HVAC)
+    // F. DWB-501: Dewatering Press Building (Dark Charcoal Corrugated Steel Hall + Galvanized External Staircase)
     const dwbGroup = new THREE.Group();
     dwbGroup.position.set(-2, 0.35, -4);
 
-    // Main 3-story structure
-    const dwbBody = new THREE.Mesh(new THREE.BoxGeometry(11.5, 6.8, 7.6), claddingMat);
+    // Main dark charcoal metal building
+    const dwbBody = new THREE.Mesh(new THREE.BoxGeometry(11.5, 6.8, 7.6), charcoalCladdingMat);
     dwbBody.position.y = 3.4;
     dwbBody.castShadow = true;
     dwbBody.receiveShadow = true;
     dwbGroup.add(dwbBody);
 
-    // Concrete structural corner pilasters & roof parapet
-    const parapet = new THREE.Mesh(new THREE.BoxGeometry(11.9, 0.45, 8.0), darkConcreteMat);
-    parapet.position.y = 6.9;
-    dwbGroup.add(parapet);
+    // Low-pitch corrugated gable roof
+    const dwbRoofLeft = new THREE.Mesh(new THREE.BoxGeometry(11.9, 0.22, 4.2), steelMat);
+    dwbRoofLeft.position.set(0, 7.1, 1.9);
+    dwbRoofLeft.rotation.x = 0.16;
+    dwbGroup.add(dwbRoofLeft);
+    const dwbRoofRight = new THREE.Mesh(new THREE.BoxGeometry(11.9, 0.22, 4.2), steelMat);
+    dwbRoofRight.position.set(0, 7.1, -1.9);
+    dwbRoofRight.rotation.x = -0.16;
+    dwbGroup.add(dwbRoofRight);
 
-    // 3 rows of industrial windows on front & back faces (matching blueprint)
-    [1.6, 3.5, 5.4].forEach(wy => {
-      [-3.5, 0, 3.5].forEach(wx => {
-        const winFront = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.95, 0.12), glassMat);
-        winFront.position.set(wx, wy, 3.82);
-        dwbGroup.add(winFront);
-        const winBack = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.95, 0.12), glassMat);
-        winBack.position.set(wx, wy, -3.82);
-        dwbGroup.add(winBack);
-      });
-    });
+    // Industrial louvers & access door on dark siding
+    const upperDoor = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.1, 0.15), steelMat);
+    upperDoor.position.set(3.5, 5.4, 3.82);
+    dwbGroup.add(upperDoor);
+    const louver = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.1, 0.12), steelMat);
+    louver.position.set(-3.0, 5.2, 3.82);
+    dwbGroup.add(louver);
 
-    // External 3-flight Steel Staircase on the right side (matching blueprint!)
-    [1.5, 3.4, 5.3].forEach((sy, idx) => {
-      const landing = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.18, 2.4), steelMat);
+    // External 3-flight Galvanized Steel Staircase on the right/front side (matching reference photo!)
+    [1.6, 3.5, 5.3].forEach((sy, idx) => {
+      const landing = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.16, 2.4), steelMat);
       landing.position.set(6.55, sy, idx % 2 === 0 ? 1.0 : -1.0);
       landing.castShadow = true;
       dwbGroup.add(landing);
-      const flight = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.15, 2.8), steelMat);
+      const flight = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.14, 2.8), steelMat);
       flight.position.set(6.55, sy - 0.85, 0);
       flight.rotation.x = idx % 2 === 0 ? -0.55 : 0.55;
       dwbGroup.add(flight);
       addHandrail(dwbGroup, 7.3, sy, -1.2, 7.3, 1.2);
     });
 
-    // Rooftop HVAC chillers & exhaust stacks (real power-plant silhouette!)
-    const hvacUnit = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.1, 2.2), steelMat);
-    hvacUnit.position.set(-2.2, 7.55, 0);
-    hvacUnit.castShadow = true;
-    dwbGroup.add(hvacUnit);
-    [-0.6, 0.8].forEach(sx => {
-      const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 1.8, 14), steelMat);
-      stack.position.set(2.5 + sx, 7.9, -1.2);
-      stack.castShadow = true;
-      dwbGroup.add(stack);
-    });
+    // Rooftop exhaust stack
+    const dwbStack = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 1.2, 14), steelMat);
+    dwbStack.position.set(0, 7.7, 0);
+    dwbGroup.add(dwbStack);
 
     scene.add(dwbGroup);
     meshes.set('unit-dwb', dwbGroup);
 
-    // G. STR-601: Dedicated Impermeable RCC Sludge Storage Shed (Open-Bay Concrete Containment Walls from Blueprint)
+    // G. STR-601: Dedicated Impermeable RCC Sludge Storage Shed (Tall Precast Concrete Warehouse + Orange Fascia Trim)
     const strGroup = new THREE.Group();
     strGroup.position.set(-14, 0.35, -4);
 
-    // Impermeable concrete floor pad
-    const strPad = new THREE.Mesh(new THREE.BoxGeometry(10.5, 0.3, 8.2), darkConcreteMat);
-    strPad.position.y = 0.15;
-    strPad.receiveShadow = true;
-    strGroup.add(strPad);
+    // Tall precast concrete warehouse shell
+    const strBody = new THREE.Mesh(new THREE.BoxGeometry(11.6, 6.2, 8.6), concreteMat);
+    strBody.position.y = 3.1;
+    strBody.castShadow = true;
+    strBody.receiveShadow = true;
+    strGroup.add(strBody);
 
-    // 3 heavy RCC containment walls + front entry opening (exact blueprint layout)
-    const backWall = new THREE.Mesh(new THREE.BoxGeometry(10.5, 4.4, 0.5), concreteMat);
-    backWall.position.set(0, 2.2, -3.85);
-    backWall.castShadow = true;
-    strGroup.add(backWall);
+    // Vertical concrete pilaster columns along front & side walls (matching reference photo!)
+    for (let px = -5.4; px <= 5.4; px += 1.8) {
+      const pilaster = new THREE.Mesh(new THREE.BoxGeometry(0.32, 6.2, 0.35), darkConcreteMat);
+      pilaster.position.set(px, 3.1, 4.35);
+      pilaster.castShadow = true;
+      strGroup.add(pilaster);
+    }
 
-    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4.4, 8.2), concreteMat);
-    leftWall.position.set(-5.0, 2.2, 0);
-    leftWall.castShadow = true;
-    strGroup.add(leftWall);
+    // Signature Safety-Orange Roof Fascia Trim + Low-Pitch Roof (matching reference photo!)
+    const orangeTrim = new THREE.Mesh(new THREE.BoxGeometry(12.0, 0.45, 9.0), safetyOrangeMat);
+    orangeTrim.position.y = 6.35;
+    strGroup.add(orangeTrim);
 
-    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4.4, 8.2), concreteMat);
-    rightWall.position.set(5.0, 2.2, 0);
-    rightWall.castShadow = true;
-    strGroup.add(rightWall);
-
-    // Partial front retaining walls with wide truck/forklift entry bay
-    [-3.2, 3.2].forEach(fx => {
-      const frontStub = new THREE.Mesh(new THREE.BoxGeometry(4.1, 4.4, 0.5), concreteMat);
-      frontStub.position.set(fx, 2.2, 3.85);
-      frontStub.castShadow = true;
-      strGroup.add(frontStub);
-    });
-
-    // Safety yellow hazard band along top edge
-    const hazardBand = new THREE.Mesh(new THREE.BoxGeometry(10.6, 0.3, 0.55), safetyYellowMat);
-    hazardBand.position.set(0, 4.25, -3.85);
-    strGroup.add(hazardBand);
-
-    // Dewatered sludge cake stockpile inside containment bay
-    const cakePile = new THREE.Mesh(new THREE.ConeGeometry(2.6, 1.8, 6), new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.95 }));
-    cakePile.position.set(0, 1.1, -0.8);
-    cakePile.scale.set(1.4, 1, 1.1);
-    strGroup.add(cakePile);
+    const strRoof = new THREE.Mesh(new THREE.BoxGeometry(11.8, 0.3, 8.8), steelMat);
+    strRoof.position.y = 6.7;
+    strGroup.add(strRoof);
 
     scene.add(strGroup);
     meshes.set('unit-str', strGroup);
 
-    // H. DSP-701: Weighbridge & TSDF Dispatch Bay + Concrete Guard Cabin (Blueprint Bottom-Right)
+    // H. DSP-701: Weighbridge & TSDF Dispatch Bay + Red Guard Cabin + Concrete Ramps (Matching Photo Far-Right!)
     const dspGroup = new THREE.Group();
     dspGroup.position.set(-23.5, 0.35, -4);
 
-    // Concrete weighbridge deck + approach ramps
-    const scaleDeck = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.42, 4.0), darkConcreteMat);
-    scaleDeck.position.y = 0.21;
+    // Concrete weighbridge deck + sloped approach ramps
+    const scaleDeck = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.45, 4.0), concreteMat);
+    scaleDeck.position.y = 0.22;
     scaleDeck.receiveShadow = true;
     dspGroup.add(scaleDeck);
+    [-5.5, 5.5].forEach(rx => {
+      const ramp = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.45, 4.0), concreteMat);
+      ramp.position.set(rx, 0.08, 0);
+      ramp.rotation.z = rx < 0 ? 0.14 : -0.14;
+      dspGroup.add(ramp);
+    });
 
     const steelPlate = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.08, 3.2), steelMat);
-    steelPlate.position.y = 0.45;
+    steelPlate.position.y = 0.47;
     dspGroup.add(steelPlate);
 
-    // Concrete Guard Cabin next to weighbridge (from blueprint!)
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.6, 2.4), concreteMat);
-    cabin.position.set(0, 1.3, -3.8);
+    // Red Guard Cabin next to weighbridge (matching photo!)
+    const redCabinMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.45, metalness: 0.25 });
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.5, 2.4), redCabinMat);
+    cabin.position.set(0, 1.25, -3.8);
     cabin.castShadow = true;
     dspGroup.add(cabin);
-    const cabinRoof = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.25, 2.9), darkConcreteMat);
-    cabinRoof.position.set(0, 2.7, -3.8);
+    const cabinRoof = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.22, 2.8), steelMat);
+    cabinRoof.position.set(0, 2.6, -3.8);
     dspGroup.add(cabinRoof);
-    const cabinWin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 0.12), glassMat);
-    cabinWin.position.set(0, 1.7, -2.58);
+    const cabinWin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.9, 0.12), glassMat);
+    cabinWin.position.set(0, 1.65, -2.58);
     dspGroup.add(cabinWin);
 
     // Realistic TSDF Haulage Truck on scale
@@ -856,6 +918,164 @@ export const Plant3DDesignView: React.FC = () => {
       scene.add(lamp);
     });
 
+    // Realistic Overcast Industrial Sky Dome (matching real-world photo!)
+    const skyCanvas = document.createElement('canvas');
+    skyCanvas.width = 16;
+    skyCanvas.height = 256;
+    const sCtx = skyCanvas.getContext('2d')!;
+    const grad = sCtx.createLinearGradient(0, 0, 0, 256);
+    if (isNightMode) {
+      grad.addColorStop(0, '#020617');
+      grad.addColorStop(0.55, '#0f172a');
+      grad.addColorStop(1, '#1e293b');
+    } else {
+      grad.addColorStop(0, '#94a3b8');
+      grad.addColorStop(0.45, '#cbd5e1');
+      grad.addColorStop(0.82, '#e2e8f0');
+      grad.addColorStop(1, '#cbd5e1');
+    }
+    sCtx.fillStyle = grad;
+    sCtx.fillRect(0, 0, 16, 256);
+    const skyTex = new THREE.CanvasTexture(skyCanvas);
+    const skyDome = new THREE.Mesh(
+      new THREE.SphereGeometry(160, 28, 20),
+      new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false })
+    );
+    scene.add(skyDome);
+
+    // Tall Utility Power Transmission Poles in Background (from photo!)
+    [[-34, -22], [-18, -24], [2, -24], [22, -22]].forEach(([px, pz]) => {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 15, 8), steelMat);
+      pole.position.set(px, 7.5, pz);
+      scene.add(pole);
+      [12.5, 14.0].forEach(cy => {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.16, 0.16), steelMat);
+        arm.position.set(px, cy, pz);
+        scene.add(arm);
+      });
+    });
+
+    // MCC Electrical Control Room & Transformer Skid (Real Power-Plant Realism)
+    const mccGroup = new THREE.Group();
+    mccGroup.position.set(16.5, 0.35, 2.0);
+    const mccRoom = new THREE.Mesh(new THREE.BoxGeometry(5.5, 3.6, 7.0), claddingMat);
+    mccRoom.position.y = 1.8;
+    mccRoom.castShadow = true;
+    mccRoom.receiveShadow = true;
+    mccGroup.add(mccRoom);
+    const mccRoof = new THREE.Mesh(new THREE.BoxGeometry(5.9, 0.3, 7.4), darkConcreteMat);
+    mccRoof.position.y = 3.7;
+    mccGroup.add(mccRoof);
+    const mccDoor = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.2, 1.2), steelMat);
+    mccDoor.position.set(-2.78, 1.1, 1.5);
+    mccGroup.add(mccDoor);
+    // Transformer with cooling fins & bushings
+    const xfmr = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7, roughness: 0.35 }));
+    xfmr.position.set(0, 1.1, 5.2);
+    xfmr.castShadow = true;
+    mccGroup.add(xfmr);
+    [-0.5, 0, 0.5].forEach(bz => {
+      const bushing = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 0.7, 10), new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.3 }));
+      bushing.position.set(0, 2.55, 5.2 + bz);
+      mccGroup.add(bushing);
+    });
+    scene.add(mccGroup);
+
+    // Overhead Steel Pipe Bridge Truss (North Line <-> South Line)
+    const trussGroup = new THREE.Group();
+    const trussSpan = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 12.0), steelMat);
+    trussSpan.position.set(2.2, 5.8, 2.0);
+    trussSpan.castShadow = true;
+    trussGroup.add(trussSpan);
+    [-3.5, 7.5].forEach(tz => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.3, 5.8, 0.3), steelMat);
+      leg.position.set(2.2, 2.9, tz);
+      leg.castShadow = true;
+      trussGroup.add(leg);
+    });
+    scene.add(trussGroup);
+
+    // Steel Access Ladders on Tanks (EQ-101, CLR-301, THK-401)
+    const addLadder = (lx: number, ly: number, lz: number, height: number) => {
+      [-0.25, 0.25].forEach(ox => {
+        const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, height, 6), safetyYellowMat);
+        rail.position.set(lx + ox, ly + height / 2, lz);
+        scene.add(rail);
+      });
+      for (let r = 0.4; r < height; r += 0.45) {
+        const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 6), safetyYellowMat);
+        rung.rotation.z = Math.PI / 2;
+        rung.position.set(lx, ly + r, lz);
+        scene.add(rung);
+      }
+    };
+    addLadder(-16, 0.35, 12.4, 4.3);   // EQ-101 ladder
+    addLadder(6.5, 0.35, 14.35, 3.7);  // CLR-301 ladder
+    addLadder(6.5, 0.35, -8.15, 4.1);  // THK-401 ladder
+
+    // Safety Bollards along Road & Weighbridge
+    for (let bx = -28; bx <= 10; bx += 4.5) {
+      const bollard = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.9, 10), safetyYellowMat);
+      bollard.position.set(bx, 0.8, -8.8);
+      bollard.castShadow = true;
+      scene.add(bollard);
+    }
+
+    // Perimeter Steel Boundary Fence Posts
+    const fenceCoords: [number, number][] = [];
+    for (let x = -36; x <= 26; x += 6) {
+      fenceCoords.push([x, 19.5], [x, -16.5]);
+    }
+    for (let z = -16.5; z <= 19.5; z += 6) {
+      fenceCoords.push([-36, z], [26, z]);
+    }
+    fenceCoords.forEach(([fx, fz]) => {
+      const fPost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.2, 6), steelMat);
+      fPost.position.set(fx, 1.1, fz);
+      scene.add(fPost);
+    });
+
+    // Twin Chemical / Lime Storage Silos with Conical Hoppers (Next to FM-201)
+    [-9.5, -6.5].forEach(sx => {
+      const siloGroup = new THREE.Group();
+      siloGroup.position.set(sx, 0.35, 14.2);
+      const siloBody = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 4.6, 20), claddingMat);
+      siloBody.position.y = 3.5;
+      siloBody.castShadow = true;
+      siloGroup.add(siloBody);
+      const siloCone = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.4, 20), steelMat);
+      siloCone.rotation.x = Math.PI;
+      siloCone.position.y = 0.7;
+      siloGroup.add(siloCone);
+      const siloCap = new THREE.Mesh(new THREE.ConeGeometry(1.15, 0.6, 20), steelMat);
+      siloCap.position.y = 6.1;
+      siloGroup.add(siloCap);
+      [-0.85, 0.85].forEach(lx => {
+        [-0.85, 0.85].forEach(lz => {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.4, 6), steelMat);
+          leg.position.set(lx, 0.7, lz);
+          siloGroup.add(leg);
+        });
+      });
+      scene.add(siloGroup);
+    });
+
+    // Natural Campus Trees outside Perimeter Fence
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: isNightMode ? 0x14331d : 0x2e5a36, roughness: 0.85 });
+    [
+      [-39, 16], [-39, 4], [-39, -12], [29, 14], [29, -2], [29, -15], [10, 22], [-12, 22],
+    ].forEach(([tx, tz]) => {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 2.0, 8), trunkMat);
+      trunk.position.set(tx, 1.0, tz);
+      trunk.castShadow = true;
+      scene.add(trunk);
+      const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(1.5, 1), leafMat);
+      crown.position.set(tx, 2.9, tz);
+      crown.castShadow = true;
+      scene.add(crown);
+    });
+
     // 6. Flow Particles Animation
     const particleCount = 220;
     const particleGeo = new THREE.BufferGeometry();
@@ -876,55 +1096,35 @@ export const Plant3DDesignView: React.FC = () => {
     scene.add(particles);
     particlesRef.current = particles;
 
-    // 7. Mouse Orbit & Raycasting Interaction
-    let isDragging = false;
-    let prevMouseX = 0;
-    let prevMouseY = 0;
-    let theta = Math.PI / 4;
-    let phi = Math.PI / 3.4;
-    let radius = 46;
-
-    const updateCameraPos = () => {
-      camera.position.x = radius * Math.sin(phi) * Math.sin(theta) - 5;
-      camera.position.y = radius * Math.cos(phi);
-      camera.position.z = radius * Math.sin(phi) * Math.cos(theta) + 1;
-      camera.lookAt(-5, 2, 1);
-    };
-    updateCameraPos();
-
-    const onMouseDown = (e: MouseEvent) => {
-      isDragging = true;
-      prevMouseX = e.clientX;
-      prevMouseY = e.clientY;
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-      const deltaX = e.clientX - prevMouseX;
-      const deltaY = e.clientY - prevMouseY;
-      prevMouseX = e.clientX;
-      prevMouseY = e.clientY;
-
-      theta -= deltaX * 0.008;
-      phi = Math.max(0.15, Math.min(Math.PI / 2.15, phi - deltaY * 0.008));
-      updateCameraPos();
-    };
-
-    const onMouseUp = () => {
-      isDragging = false;
-    };
-
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      radius = Math.max(16, Math.min(82, radius + e.deltaY * 0.03));
-      updateCameraPos();
-    };
+    // 7. 360° Smooth OrbitControls & Raycasting Interaction
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(-1.5, 2.8, 0.5);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.enablePan = true;
+    controls.minDistance = 10;
+    controls.maxDistance = 95;
+    controls.maxPolarAngle = Math.PI / 2 - 0.04;
+    controls.autoRotate = isAutoRotate;
+    controls.autoRotateSpeed = 1.6;
+    controls.update();
+    controlsRef.current = controls;
 
     // Raycast to click units (walk up parent chain so child meshes select their parent unit)
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
+    let downX = 0;
+    let downY = 0;
+
+    const onPointerDown = (e: PointerEvent) => {
+      downX = e.clientX;
+      downY = e.clientY;
+    };
 
     const onClick = (e: MouseEvent) => {
+      // Ignore drags so orbiting doesn't accidentally switch selected unit
+      if (Math.hypot(e.clientX - downX, e.clientY - downY) > 6) return;
+
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -949,10 +1149,7 @@ export const Plant3DDesignView: React.FC = () => {
     };
 
     const dom = renderer.domElement;
-    dom.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    dom.addEventListener('wheel', onWheel, { passive: false });
+    dom.addEventListener('pointerdown', onPointerDown);
     dom.addEventListener('click', onClick);
 
     // 8. Animation Loop + 3D Projected Label Positioning
@@ -979,11 +1176,7 @@ export const Plant3DDesignView: React.FC = () => {
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
-
-      if (isAutoRotate && !isDragging) {
-        theta += 0.0025;
-        updateCameraPos();
-      }
+      controls.update();
 
       // Rotate clarifier scraper bridge slowly
       bridgeGroup.rotation.y += 0.002;
@@ -1025,54 +1218,63 @@ export const Plant3DDesignView: React.FC = () => {
 
     return () => {
       cancelAnimationFrame(animId);
-      dom.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      dom.removeEventListener('wheel', onWheel);
+      dom.removeEventListener('pointerdown', onPointerDown);
       dom.removeEventListener('click', onClick);
       window.removeEventListener('resize', handleResize);
+      controls.dispose();
+      controlsRef.current = null;
+      envRT.dispose();
       if (container.contains(dom)) container.removeChild(dom);
       renderer.dispose();
     };
-  }, [isNightMode, isAutoRotate, isWireframe]);
+  }, [isNightMode, isWireframe]);
+
+  // Sync 360° auto-orbit toggle without rebuilding the WebGL scene
+  useEffect(() => {
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate = isAutoRotate;
+    }
+  }, [isAutoRotate]);
 
   // Viewport Presets
   const handleSelectPreset = (preset: string) => {
     setActivePreset(preset);
     const camera = cameraRef.current;
-    if (!camera) return;
+    const controls = controlsRef.current;
+    if (!camera || !controls) return;
 
     switch (preset) {
       case 'overview':
-        camera.position.set(-28, 24, 28);
-        camera.lookAt(-4, 2, 2);
+        camera.position.set(1.5, 10.0, 23.5);
+        controls.target.set(-1.5, 2.8, 0.5);
         break;
       case 'reaction':
-        camera.position.set(-8, 10, 18);
-        camera.lookAt(-8, 2, 8);
+        camera.position.set(-8, 10, 19);
+        controls.target.set(-8, 2, 8);
         setSelectedUnit(PLANT_UNITS[1]); // Flash Mix
         break;
       case 'clarifier':
-        camera.position.set(16, 12, 16);
-        camera.lookAt(6, 3, 8);
+        camera.position.set(17, 12, 17);
+        controls.target.set(6.5, 2.5, 8);
         setSelectedUnit(PLANT_UNITS[3]); // Clarifier
         break;
       case 'dewatering':
-        camera.position.set(4, 12, 6);
-        camera.lookAt(-2, 3, -4);
+        camera.position.set(7, 12, 8);
+        controls.target.set(-2, 3, -4);
         setSelectedUnit(PLANT_UNITS[5]); // Press Building
         break;
       case 'storage':
-        camera.position.set(-22, 10, 8);
-        camera.lookAt(-15, 3, -4);
+        camera.position.set(-20, 10, 9);
+        controls.target.set(-14, 2.5, -4);
         setSelectedUnit(PLANT_UNITS[6]); // Storage Shed
         break;
       case 'dispatch':
-        camera.position.set(-30, 8, 4);
-        camera.lookAt(-22, 1, -4);
+        camera.position.set(-32, 8, 5);
+        controls.target.set(-23.5, 1.5, -4);
         setSelectedUnit(PLANT_UNITS[7]); // Weighbridge
         break;
     }
+    controls.update();
   };
 
   return (
@@ -1117,7 +1319,7 @@ export const Plant3DDesignView: React.FC = () => {
             title="Toggle Continuous Turntable Orbit"
           >
             <RotateCw className={clsx('w-3.5 h-3.5', isAutoRotate && 'animate-spin')} />
-            <span>Auto-Rotate</span>
+            <span>360° Auto-Orbit</span>
           </button>
 
           <button
@@ -1203,7 +1405,7 @@ export const Plant3DDesignView: React.FC = () => {
 
           <div
             ref={mountRef}
-            className="w-full h-[540px] relative overflow-hidden cursor-grab active:cursor-grabbing bg-slate-950"
+            className="w-full h-[600px] relative overflow-hidden cursor-grab active:cursor-grabbing bg-slate-950"
           >
             {/* Floating 3D Unit & Field Instrument Nameplates */}
             {showLabels && (
