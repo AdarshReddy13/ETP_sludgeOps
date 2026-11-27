@@ -10,6 +10,7 @@ import { authorisationRouter } from './routes/authorisations.js';
 import { obligationRouter } from './routes/obligations.js';
 import { complianceRouter } from './routes/compliance.js';
 import { aiRouter } from './routes/ai.js';
+import { checkSupabaseConnection } from './services/supabaseService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,10 +27,13 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 // Health check
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
+  const supabase = await checkSupabaseConnection();
   res.json({
     status: 'healthy',
-    service: 'ETP SludgeOps KSPCB/CPCB Regulatory Compliance Engine',
+    service: 'ETP SludgeOps KSPCB/CPCB Regulatory Compliance & AI Engine',
+    supabase_connected: supabase.connected,
+    supabase_error: supabase.error,
     timestamp: new Date().toISOString(),
   });
 });

@@ -15,6 +15,7 @@ import {
 } from '../db/database.js';
 import { extractDocumentContent } from '../services/pdfExtractor.js';
 import { extractRulesFromText } from '../services/ruleExtractor.js';
+import { saveAnalyzedReport } from '../services/supabaseService.js';
 import { RegulatoryDocument } from '../models/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -104,11 +105,29 @@ documentRouter.post('/upload', upload.single('file'), async (req, res) => {
       await createRule(rule);
     }
 
+    const storage = await saveAnalyzedReport({
+      reportType: 'regulatory_document',
+      title: newDoc.title,
+      model: 'ruleExtractor',
+      inputPayload: {
+        fileName: file.originalname,
+        authority: newDoc.authority,
+        docType: newDoc.docType,
+        pdfPath: newDoc.pdfPath,
+      },
+      analysisResult: {
+        documentId: docId,
+        rulesExtractedCount: extractedRules.length,
+        extractedRules,
+      },
+    });
+
     res.status(201).json({
       success: true,
       document: newDoc,
       rulesExtractedCount: extractedRules.length,
       extractedRules,
+      storage,
     });
   } catch (err: any) {
     console.error('[Document Upload Error]', err);
