@@ -193,6 +193,24 @@ const PLANT_UNITS: UnitSpecification[] = [
   },
 ];
 
+interface FieldInstrument {
+  id: string;
+  tag: string;
+  name: string;
+  position: [number, number, number];
+  unitId: string;
+}
+
+const FIELD_INSTRUMENTS: FieldInstrument[] = [
+  { id: 'inst-fit-101', tag: 'FIT-101', name: 'Inlet Mag Flowmeter', position: [-10.2, 3.3, 8.0], unitId: 'unit-eq' },
+  { id: 'inst-at-102', tag: 'AT-102', name: 'pH / COD Analyzer', position: [-16.0, 5.2, 6.2], unitId: 'unit-eq' },
+  { id: 'inst-m-201', tag: 'M-201', name: '7.5kW Agitator Motor', position: [-8.0, 5.8, 8.0], unitId: 'unit-fm' },
+  { id: 'inst-lt-301', tag: 'LT-301', name: 'Clarifier Level Sensor', position: [6.0, 5.4, 8.0], unitId: 'unit-clr' },
+  { id: 'inst-dp-401', tag: 'DP-401', name: 'Sludge Transfer Pump', position: [3.2, 2.1, -4.0], unitId: 'unit-thk' },
+  { id: 'inst-pt-501', tag: 'PT-501', name: '16-Bar Filter Press', position: [-2.0, 7.8, -4.0], unitId: 'unit-dwb' },
+  { id: 'inst-wi-701', tag: 'WI-701', name: '60T Weighbridge & Cabin', position: [-23.5, 4.0, -7.8], unitId: 'unit-dsp' },
+];
+
 export const Plant3DDesignView: React.FC = () => {
   const { batches, storageCapacityTonnes } = useETP();
   const mountRef = useRef<HTMLDivElement>(null);
@@ -202,6 +220,7 @@ export const Plant3DDesignView: React.FC = () => {
   const [isNightMode, setIsNightMode] = useState<boolean>(false);
   const [isAutoRotate, setIsAutoRotate] = useState<boolean>(false);
   const [isWireframe, setIsWireframe] = useState<boolean>(false);
+  const [showLabels, setShowLabels] = useState<boolean>(true);
   const [activePreset, setActivePreset] = useState<string>('overview');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
@@ -209,7 +228,8 @@ export const Plant3DDesignView: React.FC = () => {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const meshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
+  const meshesRef = useRef<Map<string, THREE.Object3D>>(new Map());
+  const labelElsRef = useRef<Map<string, HTMLButtonElement | HTMLDivElement>>(new Map());
   const particlesRef = useRef<THREE.Points | null>(null);
 
   useEffect(() => {
@@ -222,12 +242,13 @@ export const Plant3DDesignView: React.FC = () => {
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(isNightMode ? 0x090d16 : 0xf1f5f9);
-    scene.fog = new THREE.FogExp2(isNightMode ? 0x090d16 : 0xf1f5f9, 0.012);
+    const skyColor = isNightMode ? 0x070b14 : 0xdbe6f2;
+    scene.background = new THREE.Color(skyColor);
+    scene.fog = new THREE.FogExp2(skyColor, 0.0085);
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.5, 300);
-    camera.position.set(-28, 24, 28);
-    camera.lookAt(0, 2, 0);
+    const camera = new THREE.PerspectiveCamera(42, width / height, 0.5, 320);
+    camera.position.set(-28, 22, 28);
+    camera.lookAt(-5, 2, 1);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -235,256 +256,621 @@ export const Plant3DDesignView: React.FC = () => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = isNightMode ? 1.05 : 1.12;
     rendererRef.current = renderer;
 
     container.appendChild(renderer.domElement);
 
-    // 2. Lighting Setup
-    const ambientLight = new THREE.AmbientLight(
-      isNightMode ? 0x223344 : 0xffffff,
-      isNightMode ? 0.6 : 0.85
-    );
-    scene.add(ambientLight);
+    // Helper: Procedural Canvas Textures for Real-World Industrial Materials
+    const makeTexture = (
+      base: string,
+      speckle1: string,
+      speckle2: string,
+      lines = false,
+      repeatX = 4,
+      repeatY = 4
+    ) => {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 256;
+      const ctx = c.getContext('2d')!;
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 2400; i++) {
+        ctx.fillStyle = i % 2 === 0 ? speckle1 : speckle2;
+        ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+      }
+      if (lines) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.14)';
+        ctx.lineWidth = 2;
+        for (let y = 0; y < 256; y += 32) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(256, y);
+          ctx.stroke();
+        }
+        for (let x = 0; x < 256; x += 64) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, 256);
+          ctx.stroke();
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(repeatX, repeatY);
+      return tex;
+    };
 
-    const dirLight = new THREE.DirectionalLight(isNightMode ? 0x6688cc : 0xfffaed, isNightMode ? 0.8 : 1.4);
-    dirLight.position.set(20, 40, 20);
+    const concreteTex = makeTexture('#94a3b8', 'rgba(255,255,255,0.08)', 'rgba(15,23,42,0.12)', true, 3, 3);
+    const darkConcreteTex = makeTexture('#64748b', 'rgba(255,255,255,0.06)', 'rgba(0,0,0,0.18)', true, 2, 2);
+    const steelPanelTex = makeTexture('#475569', 'rgba(255,255,255,0.05)', 'rgba(0,0,0,0.15)', true, 4, 3);
+    const asphaltTex = makeTexture('#272b33', 'rgba(255,255,255,0.05)', 'rgba(0,0,0,0.25)', false, 8, 2);
+
+    const concreteMat = new THREE.MeshStandardMaterial({
+      map: concreteTex,
+      roughness: 0.88,
+      metalness: 0.05,
+      wireframe: isWireframe,
+    });
+    const darkConcreteMat = new THREE.MeshStandardMaterial({
+      map: darkConcreteTex,
+      roughness: 0.85,
+      metalness: 0.08,
+      wireframe: isWireframe,
+    });
+    const steelMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.38,
+      metalness: 0.72,
+      wireframe: isWireframe,
+    });
+    const claddingMat = new THREE.MeshStandardMaterial({
+      map: steelPanelTex,
+      color: 0xcbd5e1,
+      roughness: 0.45,
+      metalness: 0.55,
+      wireframe: isWireframe,
+    });
+    const safetyYellowMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      roughness: 0.35,
+      metalness: 0.35,
+      wireframe: isWireframe,
+    });
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: isNightMode ? 0xfef08a : 0x38bdf8,
+      emissive: isNightMode ? 0xf59e0b : 0x0284c7,
+      emissiveIntensity: isNightMode ? 0.55 : 0.15,
+      roughness: 0.15,
+      metalness: 0.8,
+    });
+    const waterMat = new THREE.MeshStandardMaterial({
+      color: 0x0369a1,
+      roughness: 0.12,
+      metalness: 0.4,
+      transparent: true,
+      opacity: 0.86,
+    });
+    const darkWaterMat = new THREE.MeshStandardMaterial({
+      color: 0x1e3a5f,
+      roughness: 0.18,
+      metalness: 0.3,
+      transparent: true,
+      opacity: 0.9,
+    });
+
+    // 2. Realistic Industrial Lighting
+    const hemiLight = new THREE.HemisphereLight(
+      isNightMode ? 0x334155 : 0xe0f2fe,
+      isNightMode ? 0x0f172a : 0x64748b,
+      isNightMode ? 0.65 : 0.95
+    );
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(isNightMode ? 0x93c5fd : 0xfff7ed, isNightMode ? 0.85 : 1.75);
+    dirLight.position.set(24, 42, 22);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 100;
-    dirLight.shadow.camera.left = -30;
-    dirLight.shadow.camera.right = 30;
-    dirLight.shadow.camera.top = 30;
-    dirLight.shadow.camera.bottom = -30;
+    dirLight.shadow.camera.near = 1;
+    dirLight.shadow.camera.far = 110;
+    dirLight.shadow.camera.left = -36;
+    dirLight.shadow.camera.right = 36;
+    dirLight.shadow.camera.top = 36;
+    dirLight.shadow.camera.bottom = -36;
+    dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
-    // Subtle blue accent ground light
-    const pointLight = new THREE.PointLight(0x2563eb, isNightMode ? 2.5 : 1.0, 40);
-    pointLight.position.set(0, 6, 0);
-    scene.add(pointLight);
-
-    // 3. Ground Terrain & Roads
-    const groundGeo = new THREE.PlaneGeometry(80, 60);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: isNightMode ? 0x0d1522 : 0xe2e8f0,
-      roughness: 0.9,
-      metalness: 0.1,
-    });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
+    // 3. Industrial Site Ground, Concrete Apron & Haulage Road
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, 90),
+      new THREE.MeshStandardMaterial({
+        color: isNightMode ? 0x0b111d : 0x9ca3af,
+        roughness: 0.95,
+        metalness: 0.02,
+      })
+    );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Concrete plant slab
-    const slabGeo = new THREE.BoxGeometry(68, 0.4, 40);
-    const slabMat = new THREE.MeshStandardMaterial({
-      color: isNightMode ? 0x131c2e : 0xcbd5e1,
-      roughness: 0.8,
-    });
-    const slab = new THREE.Mesh(slabGeo, slabMat);
-    slab.position.set(-5, 0.1, 2);
+    // Concrete Plant Pad
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(66, 0.35, 36), concreteMat);
+    slab.position.set(-5, 0.175, 2);
     slab.receiveShadow = true;
     scene.add(slab);
 
-    // Grid lines for engineering layout
-    const grid = new THREE.GridHelper(70, 35, 0x94a3b8, isNightMode ? 0x1e293b : 0xe2e8f0);
-    grid.position.y = 0.35;
-    scene.add(grid);
+    // Asphalt Haulage Road along South/West edge (leading to DSP-701 Weighbridge)
+    const roadMat = new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.9, metalness: 0.05 });
+    const road = new THREE.Mesh(new THREE.BoxGeometry(68, 0.08, 6.2), roadMat);
+    road.position.set(-5, 0.36, -12.2);
+    road.receiveShadow = true;
+    scene.add(road);
 
-    // 4. Construct 3D Industrial Units
-    const meshes = new Map<string, THREE.Mesh>();
+    // Road center dashed yellow markings
+    for (let rx = -34; rx <= 24; rx += 3.5) {
+      const dash = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.02, 0.16), safetyYellowMat);
+      dash.position.set(rx, 0.41, -12.2);
+      scene.add(dash);
+    }
 
-    // A. Equalization Basin (Cylinder)
-    const eqGeo = new THREE.CylinderGeometry(5.5, 5.5, 4.0, 32);
-    const eqMat = new THREE.MeshStandardMaterial({
-      color: 0x475569,
-      roughness: 0.6,
-      wireframe: isWireframe,
+    // Helper: Build Hollow Open-Top Rectangular Tank
+    const buildRectTank = (
+      group: THREE.Group,
+      w: number,
+      h: number,
+      d: number,
+      wallT: number,
+      liquidColorMat: THREE.Material
+    ) => {
+      const base = new THREE.Mesh(new THREE.BoxGeometry(w, 0.4, d), darkConcreteMat);
+      base.position.y = 0.2;
+      base.castShadow = true;
+      base.receiveShadow = true;
+      group.add(base);
+
+      const wallSpecs: [number, number, number, number, number, number][] = [
+        [w, h, wallT, 0, h / 2, d / 2 - wallT / 2],
+        [w, h, wallT, 0, h / 2, -d / 2 + wallT / 2],
+        [wallT, h, d - wallT * 2, -w / 2 + wallT / 2, h / 2, 0],
+        [wallT, h, d - wallT * 2, w / 2 - wallT / 2, h / 2, 0],
+      ];
+      wallSpecs.forEach(([bw, bh, bd, bx, by, bz]) => {
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), concreteMat);
+        wall.position.set(bx, by, bz);
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        group.add(wall);
+      });
+
+      // Liquid surface inside
+      const liquid = new THREE.Mesh(
+        new THREE.BoxGeometry(w - wallT * 2 - 0.1, 0.15, d - wallT * 2 - 0.1),
+        liquidColorMat
+      );
+      liquid.position.y = h - 0.55;
+      group.add(liquid);
+    };
+
+    // Helper: Add safety handrail bar along X or Z
+    const addHandrail = (
+      group: THREE.Group,
+      x1: number,
+      y: number,
+      z1: number,
+      x2: number,
+      z2: number
+    ) => {
+      const len = Math.hypot(x2 - x1, z2 - z1);
+      const midX = (x1 + x2) / 2;
+      const midZ = (z1 + z2) / 2;
+      const angle = Math.atan2(x2 - x1, z2 - z1);
+
+      const topRail = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, len, 8), safetyYellowMat);
+      topRail.position.set(midX, y + 0.85, midZ);
+      topRail.rotation.x = Math.PI / 2;
+      topRail.rotation.z = -angle;
+      group.add(topRail);
+
+      const midRail = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len, 8), safetyYellowMat);
+      midRail.position.set(midX, y + 0.45, midZ);
+      midRail.rotation.x = Math.PI / 2;
+      midRail.rotation.z = -angle;
+      group.add(midRail);
+
+      const posts = Math.max(2, Math.floor(len / 1.5) + 1);
+      for (let i = 0; i < posts; i++) {
+        const t = i / (posts - 1);
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 8), safetyYellowMat);
+        post.position.set(x1 + (x2 - x1) * t, y + 0.45, z1 + (z2 - z1) * t);
+        group.add(post);
+      }
+    };
+
+    // 4. Construct Blueprint-Accurate Industrial Units
+    const meshes = new Map<string, THREE.Object3D>();
+
+    // A. EQ-101: Equalization Basin (Large Concrete Rectangular Basin + Catwalk + Agitator + Pump Sump)
+    const eqGroup = new THREE.Group();
+    eqGroup.position.set(-16, 0.35, 8);
+    buildRectTank(eqGroup, 9.5, 4.2, 8.5, 0.45, darkWaterMat);
+
+    // Overhead steel bridge & agitator motor
+    const eqBridge = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.25, 1.3), steelMat);
+    eqBridge.position.set(0, 4.35, 0);
+    eqBridge.castShadow = true;
+    eqGroup.add(eqBridge);
+    addHandrail(eqGroup, -4.6, 4.45, 0.6, 4.6, 0.6);
+    addHandrail(eqGroup, -4.6, 4.45, -0.6, 4.6, -0.6);
+
+    const eqMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.0, 16), new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.6, roughness: 0.3 }));
+    eqMotor.position.set(0, 5.0, 0);
+    eqMotor.castShadow = true;
+    eqGroup.add(eqMotor);
+
+    // Adjacent concrete pump sump + feed pump (from blueprint)
+    const sump = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.0, 2.4), darkConcreteMat);
+    sump.position.set(6.0, 1.0, 2.0);
+    sump.castShadow = true;
+    eqGroup.add(sump);
+    const eqPump = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.1, 12), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7, roughness: 0.3 }));
+    eqPump.rotation.z = Math.PI / 2;
+    eqPump.position.set(6.0, 2.35, 2.0);
+    eqGroup.add(eqPump);
+
+    scene.add(eqGroup);
+    meshes.set('unit-eq', eqGroup);
+
+    // B. FM-201: Flash Mix Coagulation Tank + Overhead Motor M-201 + Dosing Skid
+    const fmGroup = new THREE.Group();
+    fmGroup.position.set(-8, 0.35, 8);
+    buildRectTank(fmGroup, 3.8, 4.0, 3.8, 0.35, waterMat);
+
+    const fmBeam = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.25, 0.9), steelMat);
+    fmBeam.position.set(0, 4.15, 0);
+    fmGroup.add(fmBeam);
+    const fmMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.1, 16), new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.65, roughness: 0.25 }));
+    fmMotor.position.set(0, 4.85, 0);
+    fmMotor.castShadow = true;
+    fmGroup.add(fmMotor);
+
+    // Coagulant chemical dosing tank beside FM-201
+    const chemTank = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 2.2, 18), new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4 }));
+    chemTank.position.set(0, 1.1, 3.0);
+    chemTank.castShadow = true;
+    fmGroup.add(chemTank);
+
+    scene.add(fmGroup);
+    meshes.set('unit-fm', fmGroup);
+
+    // C. FL-202: Flocculation Chamber (Baffled Tank + Paddle Drive)
+    const flGroup = new THREE.Group();
+    flGroup.position.set(-2, 0.35, 8);
+    buildRectTank(flGroup, 5.4, 3.8, 4.6, 0.35, waterMat);
+
+    // Internal baffle walls visible in tank
+    [-1.2, 0, 1.2].forEach(bx => {
+      const baffle = new THREE.Mesh(new THREE.BoxGeometry(0.18, 3.2, 3.8), darkConcreteMat);
+      baffle.position.set(bx, 1.6, 0);
+      flGroup.add(baffle);
     });
-    const eqMesh = new THREE.Mesh(eqGeo, eqMat);
-    eqMesh.position.set(-16, 2.0, 8);
-    eqMesh.castShadow = true;
-    eqMesh.receiveShadow = true;
-    scene.add(eqMesh);
-    meshes.set('unit-eq', eqMesh);
+    const flBridge = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.22, 1.0), steelMat);
+    flBridge.position.set(0, 3.9, 0);
+    flGroup.add(flBridge);
+    const flMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.85, 14), steelMat);
+    flMotor.position.set(0, 4.45, 0);
+    flGroup.add(flMotor);
 
-    // Water surface in EQ basin
-    const eqWaterGeo = new THREE.CylinderGeometry(5.2, 5.2, 0.2, 32);
-    const eqWaterMat = new THREE.MeshStandardMaterial({
-      color: 0x0284c7,
-      roughness: 0.2,
-      metalness: 0.3,
-      transparent: true,
-      opacity: 0.85,
+    scene.add(flGroup);
+    meshes.set('unit-fl', flGroup);
+
+    // D. CLR-301: Primary Chemical Clarifier & Settler (Circular Concrete Basin + Yellow Rotating Scraper Bridge)
+    const clrGroup = new THREE.Group();
+    clrGroup.position.set(6.5, 0.35, 8);
+
+    // Outer stepped concrete cylinder wall (hollow ring using Cylinder openEnded + rim)
+    const clrWall = new THREE.Mesh(new THREE.CylinderGeometry(6.2, 6.2, 3.6, 40, 1, true), concreteMat);
+    clrWall.position.y = 1.8;
+    clrWall.castShadow = true;
+    clrWall.receiveShadow = true;
+    clrGroup.add(clrWall);
+
+    // Outer concrete rim & launder trough
+    const clrRim = new THREE.Mesh(new THREE.TorusGeometry(6.0, 0.35, 10, 40), darkConcreteMat);
+    clrRim.rotation.x = Math.PI / 2;
+    clrRim.position.y = 3.6;
+    clrGroup.add(clrRim);
+
+    // Clarifier floor & clarified water disc
+    const clrWater = new THREE.Mesh(new THREE.CylinderGeometry(5.9, 5.9, 0.25, 36), waterMat);
+    clrWater.position.y = 3.15;
+    clrGroup.add(clrWater);
+
+    // Center feedwell pier & drive column
+    const feedwell = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 3.8, 24), darkConcreteMat);
+    feedwell.position.y = 1.9;
+    clrGroup.add(feedwell);
+
+    // Rotating Yellow Truss Scraper Bridge (Signature feature from blueprint!)
+    const bridgeGroup = new THREE.Group();
+    bridgeGroup.position.y = 3.9;
+    const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(12.6, 0.28, 1.3), safetyYellowMat);
+    bridgeDeck.castShadow = true;
+    bridgeGroup.add(bridgeDeck);
+    addHandrail(bridgeGroup, -6.1, 0.14, 0.6, 6.1, 0.6);
+    addHandrail(bridgeGroup, -6.1, 0.14, -0.6, 6.1, -0.6);
+
+    const centerDrive = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.9, 16), steelMat);
+    centerDrive.position.y = 0.55;
+    bridgeGroup.add(centerDrive);
+
+    clrGroup.add(bridgeGroup);
+    scene.add(clrGroup);
+    meshes.set('unit-clr', clrGroup);
+
+    // E. THK-401: Gravity Sludge Thickener (Circular Concrete Tank + Picket Fence Bridge)
+    const thkGroup = new THREE.Group();
+    thkGroup.position.set(6.5, 0.35, -4);
+    const thkWall = new THREE.Mesh(new THREE.CylinderGeometry(4.0, 4.0, 4.0, 32, 1, true), darkConcreteMat);
+    thkWall.position.y = 2.0;
+    thkWall.castShadow = true;
+    thkGroup.add(thkWall);
+    const thkRim = new THREE.Mesh(new THREE.TorusGeometry(3.9, 0.28, 10, 32), concreteMat);
+    thkRim.rotation.x = Math.PI / 2;
+    thkRim.position.y = 4.0;
+    thkGroup.add(thkRim);
+    const thkSlurry = new THREE.Mesh(new THREE.CylinderGeometry(3.8, 3.8, 0.2, 28), new THREE.MeshStandardMaterial({ color: 0x3f2e21, roughness: 0.5 }));
+    thkSlurry.position.y = 3.55;
+    thkGroup.add(thkSlurry);
+    const thkBridge = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.25, 1.0), steelMat);
+    thkBridge.position.y = 4.2;
+    thkGroup.add(thkBridge);
+    const thkMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.85, 14), safetyYellowMat);
+    thkMotor.position.y = 4.75;
+    thkGroup.add(thkMotor);
+
+    scene.add(thkGroup);
+    meshes.set('unit-thk', thkGroup);
+
+    // F. DWB-501: Dewatering Press Building (3-Story Power-Plant Concrete/Steel Hall + External Staircase + Rooftop HVAC)
+    const dwbGroup = new THREE.Group();
+    dwbGroup.position.set(-2, 0.35, -4);
+
+    // Main 3-story structure
+    const dwbBody = new THREE.Mesh(new THREE.BoxGeometry(11.5, 6.8, 7.6), claddingMat);
+    dwbBody.position.y = 3.4;
+    dwbBody.castShadow = true;
+    dwbBody.receiveShadow = true;
+    dwbGroup.add(dwbBody);
+
+    // Concrete structural corner pilasters & roof parapet
+    const parapet = new THREE.Mesh(new THREE.BoxGeometry(11.9, 0.45, 8.0), darkConcreteMat);
+    parapet.position.y = 6.9;
+    dwbGroup.add(parapet);
+
+    // 3 rows of industrial windows on front & back faces (matching blueprint)
+    [1.6, 3.5, 5.4].forEach(wy => {
+      [-3.5, 0, 3.5].forEach(wx => {
+        const winFront = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.95, 0.12), glassMat);
+        winFront.position.set(wx, wy, 3.82);
+        dwbGroup.add(winFront);
+        const winBack = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.95, 0.12), glassMat);
+        winBack.position.set(wx, wy, -3.82);
+        dwbGroup.add(winBack);
+      });
     });
-    const eqWater = new THREE.Mesh(eqWaterGeo, eqWaterMat);
-    eqWater.position.set(-16, 3.8, 8);
-    scene.add(eqWater);
 
-    // B. Flash Mixer (Square tank)
-    const fmGeo = new THREE.BoxGeometry(3.5, 4.0, 3.5);
-    const fmMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, wireframe: isWireframe });
-    const fmMesh = new THREE.Mesh(fmGeo, fmMat);
-    fmMesh.position.set(-8, 2.0, 8);
-    fmMesh.castShadow = true;
-    scene.add(fmMesh);
-    meshes.set('unit-fm', fmMesh);
-
-    // Motor on top of Flash Mixer
-    const motorGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 16);
-    const motorMat = new THREE.MeshStandardMaterial({ color: 0x2563eb });
-    const motor = new THREE.Mesh(motorGeo, motorMat);
-    motor.position.set(-8, 4.6, 8);
-    scene.add(motor);
-
-    // C. Flocculator (Rectangular tank with baffles)
-    const flGeo = new THREE.BoxGeometry(5.5, 3.8, 4.5);
-    const flMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6, wireframe: isWireframe });
-    const flMesh = new THREE.Mesh(flGeo, flMat);
-    flMesh.position.set(-2, 1.9, 8);
-    flMesh.castShadow = true;
-    scene.add(flMesh);
-    meshes.set('unit-fl', flMesh);
-
-    // D. Primary Clarifier (Circular tank with center hopper and bridge)
-    const clrGeo = new THREE.CylinderGeometry(6.5, 5.8, 3.6, 36);
-    const clrMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, wireframe: isWireframe });
-    const clrMesh = new THREE.Mesh(clrGeo, clrMat);
-    clrMesh.position.set(6, 1.8, 8);
-    clrMesh.castShadow = true;
-    scene.add(clrMesh);
-    meshes.set('unit-clr', clrMesh);
-
-    // Clarifier bridge
-    const bridgeGeo = new THREE.BoxGeometry(13.2, 0.4, 1.2);
-    const bridgeMat = new THREE.MeshStandardMaterial({ color: 0xeab308 });
-    const bridge = new THREE.Mesh(bridgeGeo, bridgeMat);
-    bridge.position.set(6, 3.8, 8);
-    scene.add(bridge);
-
-    // E. Gravity Sludge Thickener
-    const thkGeo = new THREE.CylinderGeometry(4.2, 4.2, 4.2, 28);
-    const thkMat = new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.6, wireframe: isWireframe });
-    const thkMesh = new THREE.Mesh(thkGeo, thkMat);
-    thkMesh.position.set(6, 2.1, -4);
-    thkMesh.castShadow = true;
-    scene.add(thkMesh);
-    meshes.set('unit-thk', thkMesh);
-
-    // F. Dewatering Press Building (Industrial Hall with roof)
-    const dwbGeo = new THREE.BoxGeometry(12.0, 6.0, 8.0);
-    const dwbMat = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      roughness: 0.7,
-      wireframe: isWireframe,
-      transparent: true,
-      opacity: 0.9,
+    // External 3-flight Steel Staircase on the right side (matching blueprint!)
+    [1.5, 3.4, 5.3].forEach((sy, idx) => {
+      const landing = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.18, 2.4), steelMat);
+      landing.position.set(6.55, sy, idx % 2 === 0 ? 1.0 : -1.0);
+      landing.castShadow = true;
+      dwbGroup.add(landing);
+      const flight = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.15, 2.8), steelMat);
+      flight.position.set(6.55, sy - 0.85, 0);
+      flight.rotation.x = idx % 2 === 0 ? -0.55 : 0.55;
+      dwbGroup.add(flight);
+      addHandrail(dwbGroup, 7.3, sy, -1.2, 7.3, 1.2);
     });
-    const dwbMesh = new THREE.Mesh(dwbGeo, dwbMat);
-    dwbMesh.position.set(-2, 3.0, -4);
-    dwbMesh.castShadow = true;
-    scene.add(dwbMesh);
-    meshes.set('unit-dwb', dwbMesh);
 
-    // Press Building pitched roof
-    const roofGeo = new THREE.ConeGeometry(9.0, 2.0, 4);
-    const roofMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
-    const roof = new THREE.Mesh(roofGeo, roofMat);
-    roof.position.set(-2, 7.0, -4);
-    roof.rotation.y = Math.PI / 4;
-    scene.add(roof);
-
-    // G. Dedicated RCC Sludge Storage Shed (Enclosed wall with yellow hazard strip)
-    const strGeo = new THREE.BoxGeometry(14.0, 5.0, 9.0);
-    const strMat = new THREE.MeshStandardMaterial({
-      color: 0x64748b,
-      roughness: 0.8,
-      wireframe: isWireframe,
+    // Rooftop HVAC chillers & exhaust stacks (real power-plant silhouette!)
+    const hvacUnit = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.1, 2.2), steelMat);
+    hvacUnit.position.set(-2.2, 7.55, 0);
+    hvacUnit.castShadow = true;
+    dwbGroup.add(hvacUnit);
+    [-0.6, 0.8].forEach(sx => {
+      const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 1.8, 14), steelMat);
+      stack.position.set(2.5 + sx, 7.9, -1.2);
+      stack.castShadow = true;
+      dwbGroup.add(stack);
     });
-    const strMesh = new THREE.Mesh(strGeo, strMat);
-    strMesh.position.set(-15, 2.5, -4);
-    strMesh.castShadow = true;
-    scene.add(strMesh);
-    meshes.set('unit-str', strMesh);
 
-    // Hazard sign ribbon on shed
-    const ribbonGeo = new THREE.BoxGeometry(14.2, 0.6, 9.2);
-    const ribbonMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
-    const ribbon = new THREE.Mesh(ribbonGeo, ribbonMat);
-    ribbon.position.set(-15, 4.0, -4);
-    scene.add(ribbon);
+    scene.add(dwbGroup);
+    meshes.set('unit-dwb', dwbGroup);
 
-    // H. Weighbridge Platform & Dispatch Bay
-    const dspGeo = new THREE.BoxGeometry(9.0, 0.4, 4.5);
-    const dspMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4 });
-    const dspMesh = new THREE.Mesh(dspGeo, dspMat);
-    dspMesh.position.set(-24, 0.4, -4);
-    dspMesh.castShadow = true;
-    scene.add(dspMesh);
-    meshes.set('unit-dsp', dspMesh);
+    // G. STR-601: Dedicated Impermeable RCC Sludge Storage Shed (Open-Bay Concrete Containment Walls from Blueprint)
+    const strGroup = new THREE.Group();
+    strGroup.position.set(-14, 0.35, -4);
 
-    // TSDF Transport Truck model
-    const truckCabinGeo = new THREE.BoxGeometry(2.5, 2.4, 2.2);
-    const truckCabinMat = new THREE.MeshStandardMaterial({ color: 0xdc2626 });
-    const truckCabin = new THREE.Mesh(truckCabinGeo, truckCabinMat);
-    truckCabin.position.set(-26.5, 1.4, -4);
-    scene.add(truckCabin);
+    // Impermeable concrete floor pad
+    const strPad = new THREE.Mesh(new THREE.BoxGeometry(10.5, 0.3, 8.2), darkConcreteMat);
+    strPad.position.y = 0.15;
+    strPad.receiveShadow = true;
+    strGroup.add(strPad);
 
-    const truckBedGeo = new THREE.BoxGeometry(4.5, 2.2, 2.4);
-    const truckBedMat = new THREE.MeshStandardMaterial({ color: 0x475569 });
-    const truckBed = new THREE.Mesh(truckBedGeo, truckBedMat);
-    truckBed.position.set(-23.0, 1.3, -4);
-    scene.add(truckBed);
+    // 3 heavy RCC containment walls + front entry opening (exact blueprint layout)
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(10.5, 4.4, 0.5), concreteMat);
+    backWall.position.set(0, 2.2, -3.85);
+    backWall.castShadow = true;
+    strGroup.add(backWall);
+
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4.4, 8.2), concreteMat);
+    leftWall.position.set(-5.0, 2.2, 0);
+    leftWall.castShadow = true;
+    strGroup.add(leftWall);
+
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4.4, 8.2), concreteMat);
+    rightWall.position.set(5.0, 2.2, 0);
+    rightWall.castShadow = true;
+    strGroup.add(rightWall);
+
+    // Partial front retaining walls with wide truck/forklift entry bay
+    [-3.2, 3.2].forEach(fx => {
+      const frontStub = new THREE.Mesh(new THREE.BoxGeometry(4.1, 4.4, 0.5), concreteMat);
+      frontStub.position.set(fx, 2.2, 3.85);
+      frontStub.castShadow = true;
+      strGroup.add(frontStub);
+    });
+
+    // Safety yellow hazard band along top edge
+    const hazardBand = new THREE.Mesh(new THREE.BoxGeometry(10.6, 0.3, 0.55), safetyYellowMat);
+    hazardBand.position.set(0, 4.25, -3.85);
+    strGroup.add(hazardBand);
+
+    // Dewatered sludge cake stockpile inside containment bay
+    const cakePile = new THREE.Mesh(new THREE.ConeGeometry(2.6, 1.8, 6), new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.95 }));
+    cakePile.position.set(0, 1.1, -0.8);
+    cakePile.scale.set(1.4, 1, 1.1);
+    strGroup.add(cakePile);
+
+    scene.add(strGroup);
+    meshes.set('unit-str', strGroup);
+
+    // H. DSP-701: Weighbridge & TSDF Dispatch Bay + Concrete Guard Cabin (Blueprint Bottom-Right)
+    const dspGroup = new THREE.Group();
+    dspGroup.position.set(-23.5, 0.35, -4);
+
+    // Concrete weighbridge deck + approach ramps
+    const scaleDeck = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.42, 4.0), darkConcreteMat);
+    scaleDeck.position.y = 0.21;
+    scaleDeck.receiveShadow = true;
+    dspGroup.add(scaleDeck);
+
+    const steelPlate = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.08, 3.2), steelMat);
+    steelPlate.position.y = 0.45;
+    dspGroup.add(steelPlate);
+
+    // Concrete Guard Cabin next to weighbridge (from blueprint!)
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.6, 2.4), concreteMat);
+    cabin.position.set(0, 1.3, -3.8);
+    cabin.castShadow = true;
+    dspGroup.add(cabin);
+    const cabinRoof = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.25, 2.9), darkConcreteMat);
+    cabinRoof.position.set(0, 2.7, -3.8);
+    dspGroup.add(cabinRoof);
+    const cabinWin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 0.12), glassMat);
+    cabinWin.position.set(0, 1.7, -2.58);
+    dspGroup.add(cabinWin);
+
+    // Realistic TSDF Haulage Truck on scale
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.4, 2.1), steelMat);
+    chassis.position.set(0, 0.85, 0);
+    dspGroup.add(chassis);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.1, 2.1), new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.35, metalness: 0.4 }));
+    cab.position.set(-2.3, 1.9, 0);
+    cab.castShadow = true;
+    dspGroup.add(cab);
+    const cabWindshield = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.9, 1.8), glassMat);
+    cabWindshield.position.set(-3.36, 2.2, 0);
+    dspGroup.add(cabWindshield);
+    const tanker = new THREE.Mesh(new THREE.BoxGeometry(4.6, 2.0, 2.2), new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.4, metalness: 0.5 }));
+    tanker.position.set(1.2, 2.05, 0);
+    tanker.castShadow = true;
+    dspGroup.add(tanker);
+    [-2.5, 0.2, 2.4].forEach(wx => {
+      [-1.05, 1.05].forEach(wz => {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 14), new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.9 }));
+        wheel.rotation.x = Math.PI / 2;
+        wheel.position.set(wx, 0.65, wz);
+        dspGroup.add(wheel);
+      });
+    });
+
+    scene.add(dspGroup);
+    meshes.set('unit-dsp', dspGroup);
 
     meshesRef.current = meshes;
 
-    // 5. Connecting Pipelines (Industrial Material Conduits)
+    // 5. Industrial Pipe Racks, Flanged Pipelines & Field Instrument Housings
     const createPipe = (p1: [number, number, number], p2: [number, number, number], color: number) => {
       const v1 = new THREE.Vector3(...p1);
       const v2 = new THREE.Vector3(...p2);
       const dist = v1.distanceTo(v2);
-      const pipeGeo = new THREE.CylinderGeometry(0.18, 0.18, dist, 12);
-      const pipeMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.6 });
+      if (dist < 0.05) return;
+      const pipeGeo = new THREE.CylinderGeometry(0.18, 0.18, dist, 14);
+      const pipeMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.68 });
       const pipe = new THREE.Mesh(pipeGeo, pipeMat);
-
       pipe.position.copy(v1.clone().add(v2).multiplyScalar(0.5));
       pipe.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v2.clone().sub(v1).normalize());
+      pipe.castShadow = true;
       scene.add(pipe);
     };
 
-    // Raw Influent: EQ -> Flash Mix (Blue)
-    createPipe([-10.5, 2.5, 8], [-9.8, 2.5, 8], 0x0284c7);
-    // Flash Mix -> Flocculator (Amber)
-    createPipe([-6.2, 2.5, 8], [-4.8, 2.5, 8], 0xf59e0b);
-    // Flocculator -> Clarifier (Green)
-    createPipe([0.8, 2.5, 8], [0.8, 2.5, 8], 0x10b981);
-    // Clarifier Underflow -> Thickener (Brown)
-    createPipe([6, 0.8, 5.0], [6, 0.8, -1.8], 0x78350f);
-    // Thickener -> Dewatering Building (Dark Slurry)
-    createPipe([3.8, 1.5, -4], [4.0, 1.5, -4], 0x451a03);
-    // Dewatering -> RCC Storage Shed (Cake Conveyor)
-    createPipe([-8.0, 2.5, -4], [-8.0, 2.5, -4], 0x64748b);
-    // Filtrate Return Loop -> EQ Basin (Cyan overhead return line)
-    createPipe([-2, 5.5, -4], [-16, 5.5, 8], 0x06b6d4);
+    // Pipe rack steel stanchions
+    [[-10.5, 8], [-5.2, 8], [0.5, 8], [3.5, -4], [-8.2, -4]].forEach(([px, pz]) => {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, 3.2, 0.22), steelMat);
+      post.position.set(px, 1.6, pz);
+      scene.add(post);
+    });
+
+    // Process pipelines matching blueprint routing
+    createPipe([-11.2, 2.8, 8], [-9.9, 2.8, 8], 0x0284c7);     // EQ -> Flash Mix
+    createPipe([-6.1, 2.8, 8], [-4.7, 2.8, 8], 0xf59e0b);      // Flash Mix -> Flocculator
+    createPipe([0.7, 2.8, 8], [0.8, 2.8, 8], 0x10b981);        // Flocculator -> Clarifier
+    createPipe([6.5, 1.6, 1.8], [6.5, 1.6, 0.0], 0x78350f);    // Clarifier -> Thickener underflow
+    createPipe([2.6, 2.0, -4], [3.8, 2.0, -4], 0x451a03);      // Thickener -> Dewatering Building
+    createPipe([-7.8, 2.6, -4], [-9.0, 2.6, -4], 0x64748b);    // Dewatering -> RCC Shed
+    createPipe([-2, 6.6, -0.5], [-16, 4.8, 4.0], 0x06b6d4);    // Overhead Filtrate Return Loop
+
+    // Field Instrument Transmitter Markers (glowing cyan/amber sensor heads)
+    const instGeo = new THREE.SphereGeometry(0.24, 14, 14);
+    const instMat = new THREE.MeshStandardMaterial({
+      color: 0x06b6d4,
+      emissive: 0x0891b2,
+      emissiveIntensity: 0.7,
+      roughness: 0.2,
+    });
+    FIELD_INSTRUMENTS.forEach(inst => {
+      const marker = new THREE.Mesh(instGeo, instMat);
+      marker.position.set(inst.position[0], inst.position[1] - 0.5, inst.position[2]);
+      scene.add(marker);
+    });
+
+    // Perimeter Industrial Floodlight Poles
+    [[-30, 14], [14, 14], [-30, -14], [14, -14]].forEach(([lx, lz]) => {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 8.5, 8), steelMat);
+      pole.position.set(lx, 4.25, lz);
+      scene.add(pole);
+      const lamp = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.2, 0.35),
+        new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          emissive: 0xfef3c7,
+          emissiveIntensity: isNightMode ? 1.5 : 0.2,
+        })
+      );
+      lamp.position.set(lx, 8.5, lz);
+      scene.add(lamp);
+    });
 
     // 6. Flow Particles Animation
-    const particleCount = 200;
+    const particleCount = 220;
     const particleGeo = new THREE.BufferGeometry();
     const particlePos = new Float32Array(particleCount * 3);
-
     for (let i = 0; i < particleCount; i++) {
-      particlePos[i * 3] = (Math.random() - 0.5) * 45;
-      particlePos[i * 3 + 1] = Math.random() * 5 + 0.5;
-      particlePos[i * 3 + 2] = (Math.random() - 0.5) * 25;
+      particlePos[i * 3] = (Math.random() - 0.5) * 44;
+      particlePos[i * 3 + 1] = Math.random() * 4.5 + 0.6;
+      particlePos[i * 3 + 2] = (Math.random() - 0.5) * 24;
     }
-
     particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
     const particleMat = new THREE.PointsMaterial({
       color: 0x38bdf8,
-      size: 0.25,
+      size: 0.22,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.6,
     });
     const particles = new THREE.Points(particleGeo, particleMat);
     scene.add(particles);
@@ -495,14 +881,14 @@ export const Plant3DDesignView: React.FC = () => {
     let prevMouseX = 0;
     let prevMouseY = 0;
     let theta = Math.PI / 4;
-    let phi = Math.PI / 4;
-    let radius = 45;
+    let phi = Math.PI / 3.4;
+    let radius = 46;
 
     const updateCameraPos = () => {
-      camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
+      camera.position.x = radius * Math.sin(phi) * Math.sin(theta) - 5;
       camera.position.y = radius * Math.cos(phi);
-      camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
-      camera.lookAt(-4, 2, 2);
+      camera.position.z = radius * Math.sin(phi) * Math.cos(theta) + 1;
+      camera.lookAt(-5, 2, 1);
     };
     updateCameraPos();
 
@@ -520,7 +906,7 @@ export const Plant3DDesignView: React.FC = () => {
       prevMouseY = e.clientY;
 
       theta -= deltaX * 0.008;
-      phi = Math.max(0.1, Math.min(Math.PI / 2.1, phi - deltaY * 0.008));
+      phi = Math.max(0.15, Math.min(Math.PI / 2.15, phi - deltaY * 0.008));
       updateCameraPos();
     };
 
@@ -530,11 +916,11 @@ export const Plant3DDesignView: React.FC = () => {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      radius = Math.max(15, Math.min(80, radius + e.deltaY * 0.03));
+      radius = Math.max(16, Math.min(82, radius + e.deltaY * 0.03));
       updateCameraPos();
     };
 
-    // Raycast to click units
+    // Raycast to click units (walk up parent chain so child meshes select their parent unit)
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -548,13 +934,16 @@ export const Plant3DDesignView: React.FC = () => {
       const intersects = raycaster.intersectObjects(meshList, true);
 
       if (intersects.length > 0) {
-        const hit = intersects[0].object;
-        for (const [unitId, mesh] of meshes.entries()) {
-          if (mesh === hit || mesh.children.includes(hit as any)) {
-            const unit = PLANT_UNITS.find(u => u.id === unitId);
-            if (unit) setSelectedUnit(unit);
-            break;
+        let obj: THREE.Object3D | null = intersects[0].object;
+        while (obj) {
+          for (const [unitId, rootObj] of meshes.entries()) {
+            if (obj === rootObj) {
+              const unit = PLANT_UNITS.find(u => u.id === unitId);
+              if (unit) setSelectedUnit(unit);
+              return;
+            }
           }
+          obj = obj.parent;
         }
       }
     };
@@ -566,34 +955,58 @@ export const Plant3DDesignView: React.FC = () => {
     dom.addEventListener('wheel', onWheel, { passive: false });
     dom.addEventListener('click', onClick);
 
-    // 8. Animation Loop
+    // 8. Animation Loop + 3D Projected Label Positioning
     let animId: number;
-    let clock = new THREE.Clock();
+    const projVec = new THREE.Vector3();
+
+    const projectLabel = (id: string, wx: number, wy: number, wz: number) => {
+      const el = labelElsRef.current.get(id);
+      if (!el) return;
+      projVec.set(wx, wy, wz).project(camera);
+      if (projVec.z > 1) {
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+        return;
+      }
+      const w = container.clientWidth;
+      const h = container.clientHeight || 540;
+      const x = (projVec.x * 0.5 + 0.5) * w;
+      const y = (-projVec.y * 0.5 + 0.5) * h;
+      el.style.transform = `translate(-50%, -100%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      el.style.opacity = '1';
+      el.style.pointerEvents = 'auto';
+    };
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
 
-      // Slow auto rotation if enabled
       if (isAutoRotate && !isDragging) {
-        theta += 0.003;
+        theta += 0.0025;
         updateCameraPos();
       }
 
-      // Rotate clarifier bridge slowly
-      bridge.rotation.y += 0.002;
+      // Rotate clarifier scraper bridge slowly
+      bridgeGroup.rotation.y += 0.002;
 
-      // Animate particles along flow
+      // Animate flow particles
       if (particles) {
         const positions = particles.geometry.attributes.position.array as Float32Array;
         for (let i = 0; i < particleCount; i++) {
-          positions[i * 3] += 0.08;
-          if (positions[i * 3] > 25) positions[i * 3] = -25;
+          positions[i * 3] += 0.07;
+          if (positions[i * 3] > 22) positions[i * 3] = -22;
         }
         particles.geometry.attributes.position.needsUpdate = true;
       }
 
       renderer.render(scene, camera);
+
+      // Update projected HTML 3D labels at 60 FPS
+      PLANT_UNITS.forEach(u => {
+        projectLabel(u.id, u.position[0], u.position[1] + 4.0, u.position[2]);
+      });
+      FIELD_INSTRUMENTS.forEach(inst => {
+        projectLabel(inst.id, inst.position[0], inst.position[1], inst.position[2]);
+      });
     };
 
     animate();
@@ -709,6 +1122,21 @@ export const Plant3DDesignView: React.FC = () => {
 
           <button
             type="button"
+            onClick={() => setShowLabels(!showLabels)}
+            className={clsx(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold shadow-2xs transition-colors cursor-pointer',
+              showLabels
+                ? 'bg-cyan-50 border-cyan-300 text-cyan-800'
+                : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+            )}
+            title="Show or Hide 3D Unit & Instrument Nameplates"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Unit & Instrument Labels</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsWireframe(!isWireframe)}
             className={clsx(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold shadow-2xs transition-colors cursor-pointer',
@@ -775,8 +1203,58 @@ export const Plant3DDesignView: React.FC = () => {
 
           <div
             ref={mountRef}
-            className="w-full h-[540px] relative cursor-grab active:cursor-grabbing bg-slate-950"
+            className="w-full h-[540px] relative overflow-hidden cursor-grab active:cursor-grabbing bg-slate-950"
           >
+            {/* Floating 3D Unit & Field Instrument Nameplates */}
+            {showLabels && (
+              <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+                {PLANT_UNITS.map(u => {
+                  const isSel = selectedUnit.id === u.id;
+                  return (
+                    <button
+                      key={u.id}
+                      ref={el => {
+                        if (el) labelElsRef.current.set(u.id, el);
+                        else labelElsRef.current.delete(u.id);
+                      }}
+                      type="button"
+                      onClick={() => setSelectedUnit(u)}
+                      className={clsx(
+                        'absolute top-0 left-0 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border shadow-sm whitespace-nowrap transition-colors cursor-pointer',
+                        isSel
+                          ? 'bg-blue-600 text-white border-blue-300 ring-2 ring-blue-400/50'
+                          : 'bg-slate-900/85 text-slate-100 border-slate-600/80 hover:bg-slate-800'
+                      )}
+                      style={{ opacity: 0 }}
+                    >
+                      <span className="text-amber-400 mr-1">{u.tag}</span>
+                      <span>{u.name.split(' ').slice(0, 3).join(' ')}</span>
+                    </button>
+                  );
+                })}
+
+                {FIELD_INSTRUMENTS.map(inst => (
+                  <button
+                    key={inst.id}
+                    ref={el => {
+                      if (el) labelElsRef.current.set(inst.id, el);
+                      else labelElsRef.current.delete(inst.id);
+                    }}
+                    type="button"
+                    onClick={() => {
+                      const parentUnit = PLANT_UNITS.find(u => u.id === inst.unitId);
+                      if (parentUnit) setSelectedUnit(parentUnit);
+                    }}
+                    className="absolute top-0 left-0 px-1.5 py-0.5 rounded bg-cyan-950/90 text-cyan-200 border border-cyan-500/60 text-[9px] font-mono whitespace-nowrap shadow-xs hover:bg-cyan-900 cursor-pointer"
+                    style={{ opacity: 0 }}
+                  >
+                    <span className="font-bold text-cyan-300">{inst.tag}</span>
+                    <span className="text-slate-300 ml-1">• {inst.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Overlay Compass Rose / Scale Indicator */}
             <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white p-2.5 rounded-xl border border-slate-700/60 text-[10px] font-mono space-y-1 select-none pointer-events-none">
               <div className="flex items-center gap-1.5 font-bold text-slate-200">
