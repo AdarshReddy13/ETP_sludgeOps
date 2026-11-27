@@ -10,6 +10,7 @@ import { authorisationRouter } from './routes/authorisations.js';
 import { obligationRouter } from './routes/obligations.js';
 import { complianceRouter } from './routes/compliance.js';
 import { aiRouter } from './routes/ai.js';
+import { etpRouter } from './routes/etp.js';
 import { checkSupabaseConnection } from './services/supabaseService.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -45,6 +46,7 @@ app.use('/api/authorisations', authorisationRouter);
 app.use('/api/obligations', obligationRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/etp', etpRouter);
 
 // Global Error Handler Middleware
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

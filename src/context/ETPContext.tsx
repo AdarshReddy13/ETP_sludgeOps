@@ -78,6 +78,63 @@ interface ETPContextType {
 
 const ETPContext = createContext<ETPContextType | undefined>(undefined);
 
+const SYNC_QUEUE_KEY = 'etp_sync_queue';
+
+async function sendOrQueueMutation(type: string, payload: unknown): Promise<void> {
+  const queueItem = { type, payload, queuedAt: Date.now() };
+  try {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      throw new Error('Offline');
+    }
+    const res = await fetch('/api/etp/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, payload }),
+    });
+    if (!res.ok) {
+      throw new Error(`Sync HTTP ${res.status}`);
+    }
+  } catch {
+    try {
+      const existing = JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+      existing.push(queueItem);
+      localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(existing.slice(-50)));
+    } catch {
+      // Ignore storage quota errors
+    }
+  }
+}
+
+async function flushSyncQueue(): Promise<void> {
+  try {
+    const raw = localStorage.getItem(SYNC_QUEUE_KEY);
+    if (!raw) return;
+    const queue: { type: string; payload: unknown }[] = JSON.parse(raw);
+    if (!Array.isArray(queue) || queue.length === 0) return;
+
+    const remaining: { type: string; payload: unknown }[] = [];
+    for (const item of queue) {
+      try {
+        const res = await fetch('/api/etp/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: item.type, payload: item.payload }),
+        });
+        if (!res.ok) remaining.push(item);
+      } catch {
+        remaining.push(item);
+      }
+    }
+    if (remaining.length > 0) {
+      localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(remaining));
+    } else {
+      localStorage.removeItem(SYNC_QUEUE_KEY);
+    }
+  } catch {
+    // Ignore parse errors
+  }
+}
+
 export const ETPProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mode, setModeState] = useState<AppMode>('initial');
   const [activePage, setActivePage] = useState<PageId>('dashboard');
@@ -99,6 +156,38 @@ export const ETPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [isAddEntryModalOpen, setIsAddEntryModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  // Hydrate records from Supabase (via Express /api/etp/records) on mount and flush offline queue
+  useEffect(() => {
+    let cancelled = false;
+
+    flushSyncQueue().then(() => {
+      fetch('/api/etp/records')
+        .then(res => (res.ok ? res.json() : null))
+        .then(data => {
+          if (cancelled || !data) return;
+          if (Array.isArray(data.dailyRecords) && data.dailyRecords.length > 0) {
+            setDailyRecords(data.dailyRecords);
+          }
+          if (Array.isArray(data.batches) && data.batches.length > 0) {
+            setBatches(data.batches);
+          }
+        })
+        .catch(() => {
+          // Offline or backend sleeping: keep confirmed baseline state
+        });
+    });
+
+    const handleOnline = () => {
+      void flushSyncQueue();
+    };
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   // Evaluate alerts whenever data changes
   useEffect(() => {
@@ -145,6 +234,7 @@ export const ETPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `rec-${Date.now()}`,
     };
     setDailyRecords(prev => [record, ...prev]);
+    void sendOrQueueMutation('ADD_DAILY_RECORD', record);
 
     if (record.wetSludgeGenerated && record.wetSludgeGenerated > 0) {
       const generatedTonnes = Number((record.wetSludgeGenerated / 1000).toFixed(2));
@@ -168,23 +258,44 @@ export const ETPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         storageLocation: 'Wet Sludge Holding Tank',
       };
       setBatches(prev => [newBatch, ...prev]);
+      void sendOrQueueMutation('ADD_BATCH', newBatch);
     }
   };
 
   const updateDailyRecord = (id: string, updates: Partial<DailyGenerationRecord>) => {
-    setDailyRecords(prev => prev.map(r => (r.id === id ? { ...r, ...updates } : r)));
+    setDailyRecords(prev =>
+      prev.map(r => {
+        if (r.id === id) {
+          const updated = { ...r, ...updates };
+          void sendOrQueueMutation('UPDATE_DAILY_RECORD', updated);
+          return updated;
+        }
+        return r;
+      })
+    );
   };
 
   const deleteDailyRecord = (id: string) => {
     setDailyRecords(prev => prev.filter(r => r.id !== id));
+    void sendOrQueueMutation('DELETE_DAILY_RECORD', { id });
   };
 
   const addBatch = (batch: SludgeBatch) => {
     setBatches(prev => [batch, ...prev]);
+    void sendOrQueueMutation('ADD_BATCH', batch);
   };
 
   const updateBatch = (batchId: string, updates: Partial<SludgeBatch>) => {
-    setBatches(prev => prev.map(b => (b.batchId === batchId ? { ...b, ...updates } : b)));
+    setBatches(prev =>
+      prev.map(b => {
+        if (b.batchId === batchId) {
+          const updated = { ...b, ...updates };
+          void sendOrQueueMutation('UPDATE_BATCH', updated);
+          return updated;
+        }
+        return b;
+      })
+    );
   };
 
   const characteriseBatch = (batchId: string, charData: Partial<SludgeBatch>) => {
@@ -195,6 +306,7 @@ export const ETPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (updated.currentStage === 'Generated') {
             updated.currentStage = 'Characterised';
           }
+          void sendOrQueueMutation('UPDATE_BATCH', updated);
           return updated;
         }
         return b;
@@ -238,13 +350,15 @@ export const ETPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBatches(prev =>
       prev.map(b => {
         if (b.batchId === record.batchId) {
-          return {
+          const updated: SludgeBatch = {
             ...b,
             currentStage: 'Dewatered',
             moisturePct: record.cakeMoisturePct,
             quantityTonnes: record.dewateredCakeTonnes,
             storageLocation: 'Covered Storage Yard',
           };
+          void sendOrQueueMutation('UPDATE_BATCH', updated);
+          return updated;
         }
         return b;
       })
@@ -273,11 +387,13 @@ export const ETPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBatches(prev =>
       prev.map(b => {
         if (b.batchId === record.batchId) {
-          return {
+          const updated: SludgeBatch = {
             ...b,
             currentStage: 'Disposed',
             storageLocation: `Dispatched: ${record.facility}`,
           };
+          void sendOrQueueMutation('UPDATE_BATCH', updated);
+          return updated;
         }
         return b;
       })

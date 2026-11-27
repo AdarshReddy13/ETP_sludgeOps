@@ -11,6 +11,39 @@ const LOCAL_REPORTS_FILE = path.resolve(__dirname, '../../data/analyzed_reports.
 
 let cachedClient: SupabaseClient | null = null;
 
+const PLACEHOLDER_PATTERNS = [
+  /YOUR[-_]PROJECT/i,
+  /YOUR[-_]SECRET/i,
+  /YOUR[-_]API[-_]KEY/i,
+  /<[^>]+>/,
+  /\[[^\]]+\]/,
+  /placeholder/i,
+  /changeme/i,
+  /example/i,
+];
+
+export function isPlaceholder(val: string | undefined | null): boolean {
+  if (!val) return true;
+  const trimmed = val.trim();
+  if (trimmed === '') return true;
+  return PLACEHOLDER_PATTERNS.some((p) => p.test(trimmed));
+}
+
+export function isTableMissing(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: string; message?: string };
+  const code = err.code || '';
+  const msg = err.message || '';
+  return (
+    code === 'PGRST204' ||
+    code === 'PGRST205' ||
+    code === '42P01' ||
+    msg.includes('schema cache') ||
+    msg.includes('Could not find the table') ||
+    (msg.includes('relation') && msg.includes('does not exist'))
+  );
+}
+
 function ensureSupabaseEnvLoaded(): void {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
     const backendEnvPath = path.resolve(__dirname, '../../../backend/.env');
@@ -20,7 +53,7 @@ function ensureSupabaseEnvLoaded(): void {
   }
 }
 
-export function getSupabaseClient(): SupabaseClient {
+export function getOptionalSupabaseClient(): SupabaseClient | null {
   if (cachedClient) return cachedClient;
 
   ensureSupabaseEnvLoaded();
@@ -28,14 +61,22 @@ export function getSupabaseClient(): SupabaseClient {
   const url = process.env.SUPABASE_URL?.trim();
   const key = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
 
-  if (!url || !key) {
-    throw new Error('SUPABASE_URL or SUPABASE_SECRET_KEY is not configured in server/.env or backend/.env');
+  if (isPlaceholder(url) || isPlaceholder(key)) {
+    return null;
   }
 
-  cachedClient = createClient(url, key, {
+  cachedClient = createClient(url!, key!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   return cachedClient;
+}
+
+export function getSupabaseClient(): SupabaseClient {
+  const client = getOptionalSupabaseClient();
+  if (!client) {
+    throw new Error('SUPABASE_URL or SUPABASE_SECRET_KEY is not configured in server/.env or backend/.env');
+  }
+  return client;
 }
 
 export async function checkSupabaseConnection(): Promise<{ connected: boolean; error: string | null }> {
