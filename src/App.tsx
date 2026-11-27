@@ -8,7 +8,6 @@ import { SludgeGenerationView } from './components/modules/SludgeGenerationView'
 import { CharacterisationView } from './components/modules/CharacterisationView';
 import { DewateringView } from './components/modules/DewateringView';
 import { StorageDisposalView } from './components/modules/StorageDisposalView';
-import { CostRouteView } from './components/modules/CostRouteView';
 import { ComplianceCenterView } from './components/modules/ComplianceCenterView';
 import { Plant3DDesignView } from './components/modules/Plant3DDesignView';
 import { AddDailyEntryModal } from './components/modules/AddDailyEntryModal';
@@ -29,8 +28,6 @@ const AppContent: React.FC = () => {
         return <DewateringView />;
       case 'storage':
         return <StorageDisposalView />;
-      case 'cost':
-        return <CostRouteView />;
       case 'compliance':
         return <ComplianceCenterView />;
       case 'plant3d':

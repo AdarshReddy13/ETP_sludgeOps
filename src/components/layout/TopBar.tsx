@@ -36,7 +36,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileSidebar }) => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-none">
-                  Apex Organics ETP <span className="font-normal text-slate-400">|</span> Unit 4
+                  Quadcore <span className="font-normal text-slate-400">|</span> Unit 4
                 </h1>
                 <span className="hidden lg:inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
                   <ShieldCheck className="w-3 h-3" />

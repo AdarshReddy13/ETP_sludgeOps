@@ -58,7 +58,7 @@ Phenolic compounds - 50 mg/kg`,
 "Parisara Bhavana", Church Street, Bengaluru - 560001
 Consent for Discharge of Effluent under Section 25 of Water Act 1974 & Section 21 of Air Act 1981 and Authorisation under Rule 6 of Hazardous and Other Wastes Rules 2016.
 
-1. Consent is granted to M/s Apex Organics ETP Unit 4, Dabaspet Industrial Area, Bengaluru Rural.
+1. Consent is granted to M/s Quadcore Unit 4, Dabaspet Industrial Area, Bengaluru Rural.
 2. The quantity of Chemical Sludge from Wastewater Treatment (Schedule I, Cat 35.3) shall not exceed 2,500 TPA.
 3. Specific Condition 4: The industry shall store the dewatered hazardous sludge on an impermeable pucca concrete platform with a dedicated leachate collection sump having an on-site retention capacity not exceeding 150 tonnes.
 4. Specific Condition 7: The industry shall dispatch dewatered sludge exclusively to the authorized TSDF facility (Karnataka Waste Management Project - KWMP Dabaspet) with GPS tracked authorized vehicles and Form 10 manifests.
@@ -279,7 +279,7 @@ export const OFFICIAL_RULES_SEED: RegulatoryRule[] = [
 
 export const FACILITY_AUTHORISATION_SEED: FacilityAuthorisation = {
   id: 'auth-kspcb-apex-unit4',
-  facilityName: 'Apex Organics ETP - Unit 4 (Zero Liquid Discharge)',
+  facilityName: 'Quadcore - Unit 4 (Zero Liquid Discharge)',
   authority: 'KSPCB',
   consentType: 'CTO_Air_Water',
   consentNumber: 'KSPCB/BNG/CTO-IND/2024/782',

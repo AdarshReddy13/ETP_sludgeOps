@@ -1,0 +1,51 @@
+{
+  "features": [
+    "Influent_BOD_mgL",
+    "Influent_COD_mgL",
+    "Influent_TSS_mgL",
+    "Influent_NH4_mgL",
+    "Aeration_Tank_DO_mgL",
+    "Aeration_Tank_Temp_C",
+    "Air_Flow_km3h",
+    "pH",
+    "ORP_mV"
+  ],
+  "anomaly_features": [
+    "Influent_BOD_mgL",
+    "Influent_COD_mgL",
+    "Influent_TSS_mgL",
+    "pH",
+    "Influent_NH4_mgL"
+  ],
+  "best_model": "rf",
+  "metrics": {
+    "rf": {
+      "mae": 0.003121838909926764,
+      "r2": 0.606838291790432
+    },
+    "xgb": {
+      "mae": 0.003183115469456201,
+      "r2": 0.5843128214871022
+    }
+  },
+  "target": "sludge_kg_per_m3 (derived estimate)",
+  "versions": {
+    "sklearn": "1.6.1",
+    "xgboost": "3.4.1"
+  },
+  "note": "Derived label, municipal data, advisory only, not validated for industrial sludge.",
+  "cv_time_split_5": {
+    "rf": {
+      "mae": 0.00338,
+      "r2": 0.487
+    },
+    "xgb_tuned": {
+      "mae": 0.00338,
+      "r2": 0.486
+    },
+    "xgb_default": {
+      "mae": 0.00346,
+      "r2": 0.463
+    }
+  }
+}

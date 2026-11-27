@@ -21,7 +21,7 @@ import {
 import { evaluateSystemAlerts } from '../utils/calculations';
 
 export type AppMode = 'initial' | 'demo';
-export type PageId = 'dashboard' | 'generation' | 'characterisation' | 'dewatering' | 'storage' | 'cost' | 'compliance' | 'plant3d';
+export type PageId = 'dashboard' | 'generation' | 'characterisation' | 'dewatering' | 'storage' | 'compliance' | 'plant3d';
 
 export interface DateRange {
   label: string;
@@ -36,7 +36,7 @@ interface ETPContextType {
   setActivePage: (page: PageId) => void;
   dateRange: DateRange;
   setDateRange: (range: DateRange) => void;
-  
+
   // Data entities
   dailyRecords: DailyGenerationRecord[];
   batches: SludgeBatch[];
@@ -51,20 +51,20 @@ interface ETPContextType {
   addDailyRecord: (record: Omit<DailyGenerationRecord, 'id'>) => void;
   updateDailyRecord: (id: string, record: Partial<DailyGenerationRecord>) => void;
   deleteDailyRecord: (id: string) => void;
-  
+
   addBatch: (batch: SludgeBatch) => void;
   updateBatch: (batchId: string, updates: Partial<SludgeBatch>) => void;
   characteriseBatch: (batchId: string, charData: Partial<SludgeBatch>) => void;
-  
+
   addDewateringRecord: (record: Omit<DewateringRecord, 'id'>) => void;
   addHandlingIssue: (issue: Omit<HandlingIssueItem, 'id'>) => void;
   updateHandlingIssue: (id: string, updates: Partial<HandlingIssueItem>) => void;
 
   addDispatchRecord: (record: Omit<DispatchRecord, 'id'>) => void;
   updateCostParams: (params: Partial<CostParameters>) => void;
-  
+
   acknowledgeAlert: (alertId: string) => void;
-  
+
   // Modal states
   isAddEntryModalOpen: boolean;
   setIsAddEntryModalOpen: (open: boolean) => void;
@@ -81,7 +81,7 @@ const ETPContext = createContext<ETPContextType | undefined>(undefined);
 export const ETPProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mode, setModeState] = useState<AppMode>('initial');
   const [activePage, setActivePage] = useState<PageId>('dashboard');
-  
+
   const [dateRange, setDateRange] = useState<DateRange>({
     label: 'Last 7 Days',
     startDate: '2026-11-21',
@@ -224,7 +224,7 @@ export const ETPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         problemDescription: `Observed ${record.handlingIssueObserved || `${record.sludgeConsistency} sludge handling resistance`} during ${record.method} dewatering run.`,
         operationalImpact: 'Filtration cycle turnaround time lengthened and cake discharge release hindered.',
         environmentalImpact: 'Elevated cake moisture or filtrate TSS increases hydraulic/solids recycling footprint.',
-        possibleCause: record.cakeMoisturePct > 75 
+        possibleCause: record.cakeMoisturePct > 75
           ? `High cake moisture (${record.cakeMoisturePct}%) and ${record.sludgeConsistency} consistency`
           : `Filtrate solids elevation (${record.filtrateTssMgL} mg/L)`,
         recommendedAction: record.sludgeConsistency === 'sticky' || record.sludgeConsistency === 'oily'

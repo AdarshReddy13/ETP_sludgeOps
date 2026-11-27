@@ -226,7 +226,7 @@ const FALLBACK_RULES: RegulatoryRule[] = [
 
 const FALLBACK_AUTHORISATION: FacilityAuthorisation = {
   id: 'auth-kspcb-apex-unit4',
-  facilityName: 'Apex Organics ETP - Unit 4 (Zero Liquid Discharge)',
+  facilityName: 'Quadcore - Unit 4 (Zero Liquid Discharge)',
   authority: 'KSPCB',
   consentType: 'CTO_Air_Water',
   consentNumber: 'KSPCB/BNG/CTO-IND/2024/782',
