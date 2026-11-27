@@ -85,6 +85,36 @@ export interface HeavyMetalsProfile {
   cadmium: number | null; // mg/kg
 }
 
+export interface SludgePhysicalProperties {
+  totalSolidsPct: number | null; // % (e.g. 25.8%)
+  volatileSolidsPct: number | null; // % VSS of TS (e.g. 64.0%)
+  bulkDensityKgM3: number | null; // kg/m³ (e.g. 1080)
+  specificGravity: number | null; // e.g. 1.08
+  consistency: SludgeConsistency | 'gelatinous' | null;
+  cstSeconds: number | null; // Capillary Suction Time in seconds
+  specificResistance: string | null; // e.g. "2.4 x 10^12 m/kg"
+  odourObservation: string | null; // e.g. "Earthy / Mild Chemical", "Strong Septic"
+  appearance: string | null; // e.g. "Dark brown colloidal coagulated flocs"
+}
+
+export interface SludgeChemicalProperties {
+  sludgePH: number | null; // e.g. 5.5
+  codMgKg: number | null; // e.g. 108000
+  bodMgKg: number | null; // e.g. 32000
+  oilAndGreaseMgKg: number | null; // e.g. 950
+  totalPhenolsMgKg: number | null; // e.g. 45
+  reactiveSulphidesMgKg: number | null; // e.g. 38
+  totalCyanideMgKg: number | null; // e.g. < 5
+  totalChloridesMgKg: number | null; // e.g. 2400
+  tclpLeachateLeadMgL: number | null; // e.g. 1.2
+  tclpLeachateCadmiumMgL: number | null; // e.g. 0.4
+  tclpLeachateChromiumMgL: number | null; // e.g. 2.1
+  calorificValueKcalKg: number | null; // e.g. 2800
+  corrosivityStatus: 'Non-Corrosive (pH 2 - 12.5)' | 'Corrosive (pH < 2 or > 12.5)' | null;
+  ignitabilityStatus: 'Non-Flammable (Flash point > 60°C)' | 'Flammable' | null;
+  reactivityStatus: 'Stable' | 'Water Reactive' | 'Sulphide/Cyanide Releasing' | null;
+}
+
 export interface SludgeBatch {
   batchId: string;
   facility?: string;
@@ -105,6 +135,8 @@ export interface SludgeBatch {
   testReportFileName: string | null;
   classificationStatus: ClassificationStatus;
   calorificValueKcalKg?: number | null;
+  physicalProperties?: SludgePhysicalProperties;
+  chemicalProperties?: SludgeChemicalProperties;
   currentStage: 'Generated' | 'Characterised' | 'Dewatered' | 'Stored' | 'Disposed';
   storageLocation?: string;
   daysInStorage: number;

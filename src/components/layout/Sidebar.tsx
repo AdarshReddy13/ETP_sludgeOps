@@ -13,6 +13,7 @@ import {
   Droplets,
   Building2,
   ShieldCheck,
+  Box,
 } from 'lucide-react';
 import { useETP, PageId } from '../../context/ETPContext';
 import clsx from 'clsx';
@@ -47,6 +48,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
       label: 'KSPCB Compliance',
       icon: ShieldCheck,
       badge: batches.filter(b => b.currentStage === 'Stored' && b.daysInStorage > 90).length || undefined,
+    },
+    {
+      id: 'plant3d',
+      label: '3D Plant Design',
+      icon: Box,
     },
   ];
 

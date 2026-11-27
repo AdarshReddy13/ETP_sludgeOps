@@ -35,6 +35,9 @@ import {
   AuthorityType,
   RuleCategory,
 } from '../../types';
+import { GroqAIPanel } from '../common/GroqAIPanel';
+import { getComplianceSummary } from '../../services/groqService';
+import { RagAssistantModal } from '../common/RagAssistantModal';
 import clsx from 'clsx';
 
 // Initial verified fallback data
@@ -324,6 +327,7 @@ export const ComplianceCenterView: React.FC = () => {
   const [findings, setFindings] = useState<ComplianceEvaluationFinding[]>([]);
   const [isAuditing, setIsAuditing] = useState(false);
   const [lastAuditTime, setLastAuditTime] = useState<string>('');
+  const [isRagModalOpen, setIsRagModalOpen] = useState(false);
 
   // Finding filter
   const [findingFilter, setFindingFilter] = useState<'all' | 'statutory' | 'warning' | 'open'>('all');
@@ -849,6 +853,15 @@ export const ComplianceCenterView: React.FC = () => {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
+            onClick={() => setIsRagModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition-colors shadow-xs cursor-pointer border border-slate-700"
+          >
+            <Scale className="w-3.5 h-3.5 text-slate-300" />
+            <span>Regulatory RAG Search</span>
+          </button>
+
+          <button
+            type="button"
             onClick={runComplianceAudit}
             disabled={isAuditing}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-xs disabled:opacity-50"
@@ -1170,6 +1183,27 @@ export const ComplianceCenterView: React.FC = () => {
               Zero-Assumption Evaluator: Non-extrapolated live telemetry
             </div>
           </div>
+
+          {/* Groq AI Compliance Summary */}
+          {findings.length > 0 && (
+            <GroqAIPanel
+              buttonLabel="Summarise Compliance Findings with Groq AI"
+              onAnalyze={async () => {
+                const result = await getComplianceSummary({
+                  facilityName: 'ETP SludgeOps — Chemical Coagulation Unit',
+                  evaluationDate: new Date().toISOString().split('T')[0],
+                  findings: findings.slice(0, 10).map(f => ({
+                    type: f.recordType,
+                    severity: f.severity,
+                    description: `${f.parameterName}: ${f.actualObservedValue} (threshold: ${f.legalThresholdText})`,
+                    regulation: f.statutoryCitation,
+                    recommendedAction: f.correctiveActionMandate,
+                  })),
+                });
+                return result.summary;
+              }}
+            />
+          )}
 
           {/* Findings List */}
           {filteredFindings.length === 0 ? (
@@ -1957,6 +1991,12 @@ export const ComplianceCenterView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* RAG Knowledge Engine Modal */}
+      <RagAssistantModal
+        isOpen={isRagModalOpen}
+        onClose={() => setIsRagModalOpen(false)}
+      />
     </div>
   );
 };

@@ -21,7 +21,7 @@ import {
 import { evaluateSystemAlerts } from '../utils/calculations';
 
 export type AppMode = 'initial' | 'demo';
-export type PageId = 'dashboard' | 'generation' | 'characterisation' | 'dewatering' | 'storage' | 'cost' | 'compliance';
+export type PageId = 'dashboard' | 'generation' | 'characterisation' | 'dewatering' | 'storage' | 'cost' | 'compliance' | 'plant3d';
 
 export interface DateRange {
   label: string;

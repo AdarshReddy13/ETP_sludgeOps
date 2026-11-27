@@ -10,6 +10,7 @@ import { DewateringView } from './components/modules/DewateringView';
 import { StorageDisposalView } from './components/modules/StorageDisposalView';
 import { CostRouteView } from './components/modules/CostRouteView';
 import { ComplianceCenterView } from './components/modules/ComplianceCenterView';
+import { Plant3DDesignView } from './components/modules/Plant3DDesignView';
 import { AddDailyEntryModal } from './components/modules/AddDailyEntryModal';
 
 const AppContent: React.FC = () => {
@@ -32,6 +33,8 @@ const AppContent: React.FC = () => {
         return <CostRouteView />;
       case 'compliance':
         return <ComplianceCenterView />;
+      case 'plant3d':
+        return <Plant3DDesignView />;
       default:
         return <DashboardView />;
     }

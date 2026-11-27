@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -8,6 +9,7 @@ import { ruleRouter } from './routes/rules.js';
 import { authorisationRouter } from './routes/authorisations.js';
 import { obligationRouter } from './routes/obligations.js';
 import { complianceRouter } from './routes/compliance.js';
+import { aiRouter } from './routes/ai.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +40,7 @@ app.use('/api/rules', ruleRouter);
 app.use('/api/authorisations', authorisationRouter);
 app.use('/api/obligations', obligationRouter);
 app.use('/api/compliance', complianceRouter);
+app.use('/api/ai', aiRouter);
 
 // Global Error Handler Middleware
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

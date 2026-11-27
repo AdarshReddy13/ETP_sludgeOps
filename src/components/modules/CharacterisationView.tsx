@@ -14,21 +14,26 @@ import {
   Layers,
   FileCheck2,
   ExternalLink,
+  Droplets,
+  Sparkles,
 } from 'lucide-react';
 import { useETP } from '../../context/ETPContext';
 import { DataTable, Column } from '../common/DataTable';
 import { StatusBadge } from '../common/StatusBadge';
 import { KPICard } from '../common/KPICard';
 import { CharacteriseBatchModal } from './CharacteriseBatchModal';
+import { ChemicalPhysicalPropertiesModal } from './ChemicalPhysicalPropertiesModal';
 import { SludgeBatch, ClassificationStatus } from '../../types';
 import { formatNumber } from '../../utils/calculations';
 import clsx from 'clsx';
 
 export const CharacterisationView: React.FC = () => {
-  const { batches, characteriseBatch, addBatch } = useETP();
+  const { batches, characteriseBatch, addBatch, updateBatch, setActivePage } = useETP();
 
   const [selectedBatchForModal, setSelectedBatchForModal] = useState<SludgeBatch | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedBatchForProperties, setSelectedBatchForProperties] = useState<SludgeBatch | null>(null);
+  const [isPropertiesModalOpen, setIsPropertiesModalOpen] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<string>('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
   const [selectedMetalFilter, setSelectedMetalFilter] = useState<string>('all');
@@ -222,14 +227,29 @@ export const CharacterisationView: React.FC = () => {
       header: 'Actions',
       align: 'right',
       render: r => (
-        <button
-          type="button"
-          onClick={() => handleOpenCharacterise(r)}
-          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-        >
-          <FlaskConical className="w-3 h-3" />
-          <span>{r.classificationStatus === 'pending' ? 'Characterise' : 'Edit Lab Data'}</span>
-        </button>
+        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedBatchForProperties(r);
+              setIsPropertiesModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+            title="Show full chemical and physical properties from lab report"
+          >
+            <Droplets className="w-3 h-3 text-emerald-600" />
+            <span>Chemical & Physical Properties</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOpenCharacterise(r)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+          >
+            <FlaskConical className="w-3 h-3" />
+            <span>{r.classificationStatus === 'pending' ? 'Characterise' : 'Edit Lab Data'}</span>
+          </button>
+        </div>
       ),
     },
   ];
@@ -248,14 +268,28 @@ export const CharacterisationView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleCreateNewLabEntry}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs self-start sm:self-auto transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Laboratory Test Entry</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedBatchForProperties(batches[0] || null);
+              setIsPropertiesModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+          >
+            <Droplets className="w-4 h-4" />
+            <span>Show Chemical & Physical Properties</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCreateNewLabEntry}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Laboratory Test Entry</span>
+          </button>
+        </div>
       </div>
 
       {/* Mandatory Statutory Warning Banner */}
@@ -467,6 +501,14 @@ export const CharacterisationView: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Chemical and Physical Properties Modal */}
+      <ChemicalPhysicalPropertiesModal
+        isOpen={isPropertiesModalOpen}
+        onClose={() => setIsPropertiesModalOpen(false)}
+        batch={selectedBatchForProperties}
+        onNavigateToDewatering={() => setActivePage('dewatering')}
+        onUpdateBatch={updateBatch}
+      />
     </div>
   );
 };
