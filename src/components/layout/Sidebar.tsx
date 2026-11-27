@@ -10,7 +10,6 @@ import {
   RefreshCw,
   X,
   Droplets,
-  Building2,
   ShieldCheck,
   Box,
 } from 'lucide-react';
@@ -94,22 +93,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose })
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
-
-        {/* Current Plant Info Pill */}
-        <div className="p-3.5 mx-3 mt-3 rounded-xl bg-slate-800/70 border border-slate-700/60 text-xs">
-          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-            <span className="flex items-center gap-1">
-              <Building2 className="w-3.5 h-3.5 text-blue-400" />
-              Active Unit
-            </span>
-            <span className="text-[10px] text-emerald-400 font-mono">ONLINE</span>
-          </div>
-          <div className="font-semibold text-white truncate text-xs">Quadcore - Plant 4</div>
-          <div className="text-[11px] text-slate-400 flex items-center justify-between mt-1">
-            <span>Baseline Confirmed:</span>
-            <span className="font-mono text-amber-300 font-medium">COD &gt;100k | pH 5.5</span>
-          </div>
         </div>
 
         {/* Navigation Links */}
