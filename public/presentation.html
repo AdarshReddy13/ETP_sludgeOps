@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ETP SludgeOps — Hackathon Presentation Deck</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      .slide { page-break-after: always; height: 100vh; display: flex !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans select-none overflow-hidden h-screen flex flex-col justify-between">
+
+  <!-- Top Navigation & Controls Bar -->
+  <header class="no-print h-14 bg-slate-900 border-b border-slate-800 px-6 flex items-center justify-between z-30">
+    <div class="flex items-center gap-3">
+      <span class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
+      <span class="font-bold text-sm tracking-wide text-white uppercase">ETP SludgeOps Deck</span>
+      <span class="text-xs text-slate-400 font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700">B4K BUILDATHON 2026</span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span id="slideCounter" class="text-xs font-mono font-bold text-slate-300 px-2.5 py-1 bg-slate-800 rounded-lg border border-slate-700">1 / 11</span>
+      <button onclick="prevSlide()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer">← Prev</button>
+      <button onclick="nextSlide()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer">Next →</button>
+      <button onclick="window.print()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold rounded-lg transition-colors text-slate-300 cursor-pointer">🖨️ Print / Save PDF</button>
+      <button onclick="toggleFullscreen()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold rounded-lg transition-colors text-slate-300 cursor-pointer">⛶ Fullscreen</button>
+    </div>
+  </header>
+
+  <!-- Main Slide Container -->
+  <main class="flex-1 flex items-center justify-center p-4 sm:p-8 overflow-y-auto">
+
+    <!-- SLIDE 1: Cover -->
+    <section class="slide w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-12 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="text-xs font-mono font-bold tracking-widest text-blue-400 uppercase mb-3">
+          PROBLEM STATEMENT [4]  ·  [INDUSTRIAL WATER & WASTE MANAGEMENT]
+        </div>
+        <h1 class="text-4xl sm:text-6xl font-extrabold text-white tracking-tight mb-4">
+          ETP SludgeOps
+        </h1>
+        <p class="text-lg sm:text-xl text-slate-300 font-medium max-w-3xl leading-relaxed">
+          Industrial ETP sludge tracking, regulatory compliance RAG engine, and 3D digital twin from generation to authorized TSDF disposal.
+        </p>
+      </div>
+
+      <div class="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row justify-between gap-4 text-xs font-mono text-slate-400">
+        <div>
+          <span class="text-slate-200 font-bold block">TEAM:</span>
+          <span>EcoStream AI · [B4K-MLR-42]</span>
+        </div>
+        <div>
+          <span class="text-slate-200 font-bold block">MEMBERS:</span>
+          <span>Adarsh Reddy (Lead), Engineering Team</span>
+        </div>
+        <div>
+          <span class="text-slate-200 font-bold block">COLLEGE / VENUE:</span>
+          <span>B4K Hackathon / Buildathon 2026</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: The Problem -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-6">
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span class="text-blue-500 font-mono">1</span> The Problem
+          </h2>
+          <span class="text-xs font-mono text-slate-400">High-Strength Sludge & Regulatory Blindspots</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700/70 space-y-2">
+            <h3 class="font-bold text-sm text-blue-400 uppercase tracking-wider">Who Faces It</h3>
+            <p class="text-slate-300 leading-relaxed">
+              • Environmental Health & Safety (EHS) officers and ETP plant operators.<br>
+              • Chemical synthesis, bulk drug (API), and textile manufacturing units.<br>
+              • Common Effluent Treatment Plant (CETP) operating consortiums.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700/70 space-y-2">
+            <h3 class="font-bold text-sm text-amber-400 uppercase tracking-wider">The Failure Today</h3>
+            <p class="text-slate-300 leading-relaxed">
+              • Chemical plants generate hazardous coagulation sludge with high organic COD (>100,000 mg/L) and acidic pH (5.5).<br>
+              • Unmonitored storage risks heavy metal leaching (Cr, Ni, Pb, Cd) and septic H₂S emissions.<br>
+              • Transport without Form 10 manifests invites immediate statutory notices.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700/70 space-y-2">
+            <h3 class="font-bold text-sm text-red-400 uppercase tracking-wider">How Big It Is</h3>
+            <p class="text-slate-300 leading-relaxed">
+              • <strong class="text-white">8.5+ Million Tonnes</strong> of hazardous sludge produced in India annually (CPCB).<br>
+              • <strong class="text-white">₹10L - ₹50L</strong> in environmental compensation and closure orders.<br>
+              • Section 15 Environment Protection Act 1986 imposes up to <strong class="text-white">5 years imprisonment</strong> or ₹1L fine.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700/70 space-y-2">
+            <h3 class="font-bold text-sm text-slate-400 uppercase tracking-wider">Why Today's Way Fails</h3>
+            <p class="text-slate-300 leading-relaxed">
+              • <strong class="text-white">Paper Logbooks</strong>: Daily shift entries are disconnected from legal retention limits.<br>
+              • <strong class="text-white">Static NABL Certs</strong>: Lab reports sit in filing cabinets without driving actual press recipes.<br>
+              • <strong class="text-white">Zero Early Warning</strong>: Plants realize they exceeded the 90-day storage cap only after SPCB inspections.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono text-right pt-4 border-t border-slate-800/80">Press Right Arrow → to continue</div>
+    </section>
+
+    <!-- SLIDE 3: Our Solution -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-5">
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span class="text-blue-500 font-mono">2</span> Our Solution
+          </h2>
+          <span class="text-xs font-mono text-emerald-400">Zero-Assumption Telemetry + RAG + 3D Twin</span>
+        </div>
+
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-5 bg-slate-800/50 p-3.5 rounded-xl border border-slate-700">
+          <strong class="text-white">ETP SludgeOps</strong> helps <strong class="text-white">industrial ETP operators and EHS compliance managers</strong> to <strong class="text-white">track, dewater, and audit hazardous chemical sludge</strong> by <strong class="text-white">combining a zero-assumption telemetry engine, Groq-powered statutory RAG knowledge base, and an interactive 3D digital twin</strong>.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <span class="font-bold text-xs text-blue-400 uppercase block">Benefit 1</span>
+            <h4 class="font-bold text-sm text-white">Automated 90-Day Legal Audit</h4>
+            <p class="text-slate-300 leading-relaxed">
+              • Continuous countdown toward MoEFCC HOWM Rule 8 storage limit (90 days).<br>
+              • Real-time retention cap tracking against 150T KSPCB consent.<br>
+              • 1-click Form 10 highway manifest generation.<br>
+              • Zero Section 15 EPA violations.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <span class="font-bold text-xs text-emerald-400 uppercase block">Benefit 2</span>
+            <h4 class="font-bold text-sm text-white">Lab-to-Press Optimization</h4>
+            <p class="text-slate-300 leading-relaxed">
+              • Translates certified NABL lab reports into exact dewatering recipes.<br>
+              • Prescribes lime neutralization (pH 5.5) + cationic polyacrylamide.<br>
+              • Optimizes plate & frame press cycle (16 bar, 2.5 hr).<br>
+              • Achieves >70% volume reduction.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <span class="font-bold text-xs text-purple-400 uppercase block">Benefit 3</span>
+            <h4 class="font-bold text-sm text-white">Grounded Regulatory RAG</h4>
+            <p class="text-slate-300 leading-relaxed">
+              • Groq LLM (openai/gpt-oss-120b) + BM25 statutory vector retriever.<br>
+              • Queries official gazettes: HOWM 2016, KSPCB CTO 782, CPCB AFR.<br>
+              • Exact citations & legal penalty notices with 98% confidence.<br>
+              • Strict zero-assumption policy.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono text-right pt-4 border-t border-slate-800/80">Slide 3 of 11</div>
+    </section>
+
+    <!-- SLIDE 4: Features Table -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span class="text-blue-500 font-mono">3</span> Features Status
+          </h2>
+          <span class="text-xs font-mono text-emerald-400">6 Working Features Verified Live</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-slate-700 bg-slate-800/70 text-slate-300 font-mono">
+                <th class="p-2.5">#</th>
+                <th class="p-2.5">Feature Name</th>
+                <th class="p-2.5">Status</th>
+                <th class="p-2.5">Technical Scope & Implementation</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/80">
+              <tr>
+                <td class="p-2.5 font-mono text-slate-400">1</td>
+                <td class="p-2.5 font-bold text-white">Sludge Generation Tracker</td>
+                <td class="p-2.5 font-mono font-bold text-emerald-400">Working</td>
+                <td class="p-2.5 text-slate-300">COD mass balance, wet sludge generation factor, moisture tracking, CSV export.</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono text-slate-400">2</td>
+                <td class="p-2.5 font-bold text-white">Laboratory Characterisation</td>
+                <td class="p-2.5 font-mono font-bold text-emerald-400">Working</td>
+                <td class="p-2.5 text-slate-300">Heavy metals (Cr, Ni, Pb, Cd), reactive sulphides, TCLP leachate caps.</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono text-slate-400">3</td>
+                <td class="p-2.5 font-bold text-white">Simplest Dewatering Engine</td>
+                <td class="p-2.5 font-mono font-bold text-emerald-400">Working</td>
+                <td class="p-2.5 text-slate-300">8 diagnostic cards, explainable difficulty score, 3-step lime/polymer recipe.</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono text-slate-400">4</td>
+                <td class="p-2.5 font-bold text-white">KSPCB + CPCB Compliance Center</td>
+                <td class="p-2.5 font-mono font-bold text-emerald-400">Working</td>
+                <td class="p-2.5 text-slate-300">90-day countdown, shed retention cap checks, SHA-256 audit hashes, Form 10 manifests.</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono text-slate-400">5</td>
+                <td class="p-2.5 font-bold text-white">Regulatory RAG Engine</td>
+                <td class="p-2.5 font-mono font-bold text-emerald-400">Working</td>
+                <td class="p-2.5 text-slate-300">BM25 statutory chunking + Groq LLM synthesis with verified gazette citations.</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono text-slate-400">6</td>
+                <td class="p-2.5 font-bold text-white">3D Plant Digital Twin</td>
+                <td class="p-2.5 font-mono font-bold text-emerald-400">Working</td>
+                <td class="p-2.5 text-slate-300">WebGL hardware-accelerated 3D plant layout with 8 clickable unit operations & live telemetry.</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono text-slate-400">7</td>
+                <td class="p-2.5 font-bold text-white">IoT PLC Edge Connector</td>
+                <td class="p-2.5 font-mono font-bold text-amber-400">In progress</td>
+                <td class="p-2.5 text-slate-400">Direct Modbus / RS-485 connection to filter press pressure transmitters.</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono text-slate-400">8</td>
+                <td class="p-2.5 font-bold text-white">Highway GPS Transporter Tracking</td>
+                <td class="p-2.5 font-mono font-bold text-slate-500">Planned</td>
+                <td class="p-2.5 text-slate-400">Real-time GPS sync with TSDF weighbridge gate APIs.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono text-right pt-2 border-t border-slate-800/80">At least 5 working required by jury · 6 verified live</div>
+    </section>
+
+    <!-- SLIDE 5: Live Demo -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-6">
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span class="text-blue-500 font-mono">4</span> LIVE DEMO · 5 MINUTES
+          </h2>
+          <span class="text-xs font-mono text-blue-400 bg-blue-950 px-2.5 py-1 rounded border border-blue-800">http://localhost:5173</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-mono font-bold flex items-center justify-center text-xs">1</span>
+              <h3 class="font-bold text-sm text-white">3D Plant Layout Tour</h3>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              • Launch the <strong>3D Plant Design</strong> view in sidebar.<br>
+              • Tour the Equalization Basin (EQ-101), Clarifier (CLR-301), and the 150T RCC Storage Shed.<br>
+              • Click any 3D unit to inspect live telemetry (COD >100k, pH 5.5), dimensions, volume, and HRT.<br>
+              • Toggle Day/Night lighting and turntable auto-rotate.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-emerald-600 text-white font-mono font-bold flex items-center justify-center text-xs">2</span>
+              <h3 class="font-bold text-sm text-white">Simplest Dewatering</h3>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              • Open batch <strong>LAB-5481</strong> in Characterisation view.<br>
+              • Inspect lab properties: acidic pH 5.5, high CST 85s, sticky consistency, and TCLP lead.<br>
+              • Click <strong>Simplest Dewatering Solution</strong> to generate the 3-step recipe: 18 kg/t lime + 4.2 kg/t polymer + 16 bar press.<br>
+              • Click <em>Apply to Dewatering Run Log</em>.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-purple-600 text-white font-mono font-bold flex items-center justify-center text-xs">3</span>
+              <h3 class="font-bold text-sm text-white">Regulatory RAG & Manifest</h3>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              • Click <strong>Regulatory RAG</strong> in the top bar.<br>
+              • Query: <em>"What is the maximum on-site storage limit under HOWM Rule 8 and what is the penalty?"</em><br>
+              • View grounded citations to Rule 8(1), KSPCB Amendment 891, and Section 15 EPA 1986.<br>
+              • Export verified CSV dossier with SHA-256 audit hashes.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono text-right pt-4 border-t border-slate-800/80">Slide 5 of 11</div>
+    </section>
+
+    <!-- SLIDE 6: User Workflow -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-6">
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span class="text-blue-500 font-mono">5</span> User Workflow
+          </h2>
+          <span class="text-xs font-mono text-slate-400">Step-by-Step Operator Journey</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 text-xs">
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <span class="text-blue-400 font-bold font-mono">STEP 1</span>
+            <h4 class="font-bold text-white text-xs">Daily Shift Entry</h4>
+            <p class="text-slate-300 leading-relaxed text-[11px]">Operator logs daily wastewater flow (m³/d), raw COD load, coagulant doses, and wet sludge mass.</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <span class="text-emerald-400 font-bold font-mono">STEP 2</span>
+            <h4 class="font-bold text-white text-xs">Lab Characterisation</h4>
+            <p class="text-slate-300 leading-relaxed text-[11px]">Chemist records certified NABL assay: heavy metals (Cr, Ni, Pb, Cd), reactive sulphides, & TCLP leachability.</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <span class="text-purple-400 font-bold font-mono">STEP 3</span>
+            <h4 class="font-bold text-white text-xs">Dewatering Recipe</h4>
+            <p class="text-slate-300 leading-relaxed text-[11px]">Plant supervisor applies the AI Simplest Solution recipe (lime + polymer) to the plate & frame press.</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <span class="text-amber-400 font-bold font-mono">STEP 4</span>
+            <h4 class="font-bold text-white text-xs">Covered Shed Storage</h4>
+            <p class="text-slate-300 leading-relaxed text-[11px]">System tracks cumulative mass against the 150T CTO cap and triggers automated countdown before 90-day expiry.</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <span class="text-rose-400 font-bold font-mono">STEP 5</span>
+            <h4 class="font-bold text-white text-xs">TSDF Manifest</h4>
+            <p class="text-slate-300 leading-relaxed text-[11px]">Generates Form 10 manifests, validates GPS carrier registration, and logs KWMP Dabaspet gate receipt.</p>
+          </div>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono text-right pt-4 border-t border-slate-800/80">Slide 6 of 11</div>
+    </section>
+
+    <!-- SLIDE 7: Architecture -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-6">
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span class="text-blue-500 font-mono">6</span> Data Flow and Architecture
+          </h2>
+          <span class="text-xs font-mono text-slate-400">End-to-End System Integration</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs mb-6">
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <h4 class="font-bold text-sm text-blue-400">Input Data Streams</h4>
+            <p class="text-slate-300 leading-relaxed">
+              • Daily Shift Telemetry: Wastewater flow m³/d, Influent COD (>100,000 mg/L), pH (5.5).<br>
+              • NABL Lab Reports: Heavy metals, reactive sulphides, capillary suction time (CST).<br>
+              • Regulatory PDFs: MoEFCC HOWM Rules 2016, KSPCB Consent No. 782, CPCB AFR.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <h4 class="font-bold text-sm text-emerald-400">AI & Processing Layer</h4>
+            <p class="text-slate-300 leading-relaxed">
+              • Deterministic Telemetry: COD mass balance, dry solids, volume reduction equations.<br>
+              • BM25 Statutory Vector Index: 20+ gazette provisions with section-level metadata.<br>
+              • Groq LLM (openai/gpt-oss-120b): Fast context-augmented generation.<br>
+              • SHA-256 Audit Hasher: Cryptographic evidence proof.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700 space-y-2">
+            <h4 class="font-bold text-sm text-purple-400">Output Deliverables</h4>
+            <p class="text-slate-300 leading-relaxed">
+              • Real-Time SaaS Dashboards: Status banners, KPIs, and disposal deadline alerts.<br>
+              • 3D WebGL Digital Twin: Spatial equipment representation.<br>
+              • 3-Step Dewatering Prescriptions: Chemical conditioning recipes.<br>
+              • Form 10 Manifests: Verified 7-copy highway transport documentation.
+            </p>
+          </div>
+        </div>
+
+        <!-- Architecture Flow Banner -->
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-slate-300 flex items-center justify-between overflow-x-auto gap-3">
+          <span class="text-blue-400">[React 19 + Three.js 3D]</span>
+          <span>← Vite Proxy (5173) →</span>
+          <span class="text-emerald-400">[Express 5 API (5000)]</span>
+          <span>← Query / Save →</span>
+          <span class="text-amber-400">[Embedded JSON-WAL Store]</span>
+          <span>← RAG Prompt →</span>
+          <span class="text-purple-400">[Groq Cloud LPU]</span>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono text-right pt-4 border-t border-slate-800/80">Slide 7 of 11</div>
+    </section>
+
+    <!-- SLIDE 8: How We Use AI -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span class="text-blue-500 font-mono">7</span> How We Use AI
+          </h2>
+          <span class="text-xs font-mono text-purple-400">Strict Legal Safety & Zero Speculation</span>
+        </div>
+
+        <div class="overflow-x-auto mb-4">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-slate-700 bg-slate-800/70 text-slate-300 font-mono">
+                <th class="p-2.5">Model or Tool</th>
+                <th class="p-2.5">What It Does in Our Product</th>
+                <th class="p-2.5">Why We Chose It</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/80 text-slate-300">
+              <tr>
+                <td class="p-2.5 font-bold text-white font-mono">Groq Cloud API<br><span class="text-[10px] text-slate-400 font-normal">openai/gpt-oss-120b</span></td>
+                <td class="p-2.5">Synthesizes contextual regulatory answers and interprets complex physicochemical lab assays.</td>
+                <td class="p-2.5 text-slate-400">Sub-second inference speed, exceptional reasoning over statutory legal texts, zero GPU idle cost.</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-bold text-white font-mono">Custom In-Memory<br>BM25 Retriever</td>
+                <td class="p-2.5">Indexes official gazettes (HOWM 2016, KSPCB CTO) into semantic passages with section metadata.</td>
+                <td class="p-2.5 text-slate-400">Deterministic zero-hallucination grounding; runs embedded in Node.js backend with 0ms cloud latency.</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-bold text-white font-mono">Deterministic<br>Compliance Engine</td>
+                <td class="p-2.5">Evaluates sludge storage age, shed capacity caps, and statutory violation thresholds.</td>
+                <td class="p-2.5 text-slate-400">100% auditable; law cannot be left to probabilistic guessing; guarantees exact EPA Section 15 notices.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-800/50 border border-slate-700 text-xs space-y-1.5">
+          <h4 class="font-bold text-amber-400 uppercase tracking-wider text-[11px]">AI Guardrails & Zero-Assumption Policy:</h4>
+          <p class="text-slate-300 leading-relaxed text-[11px]">
+            • <strong class="text-white">What AI is NOT allowed to do</strong>: The AI is strictly prohibited from inventing missing sludge measurements (zero-assumption data policy) or fabricating legal limits outside approved official gazettes.<br>
+            • <strong class="text-white">What happens when unsure</strong>: If retrieved passages do not contain an exact statutory provision, the system explicitly states: <em>"No approved regulatory provision retrieved — consult SPCB environmental officer"</em>, completely eliminating speculative legal advice.
+          </p>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono text-right pt-2 border-t border-slate-800/80">Slide 8 of 11</div>
+    </section>
+
+    <!-- SLIDE 9: Viability -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-6">
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span class="text-blue-500 font-mono">8</span> Viability
+          </h2>
+          <span class="text-xs font-mono text-emerald-400">Sustainable Unit Economics</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <span class="font-bold text-xs text-blue-400 uppercase block">Cost to Run</span>
+            <div class="text-2xl font-bold font-mono text-white">₹5,800 <span class="text-xs font-normal text-slate-400">/ month</span></div>
+            <p class="text-slate-300 leading-relaxed text-[11px]">
+              Realistic cost for 50 facilities:<br>
+              • VPS Cloud Backend & DB: ₹3,500/mo<br>
+              • Groq AI Inference: ₹1,500/mo<br>
+              • CDN & Hosting: ₹800/mo<br>
+              • <strong class="text-emerald-400">&lt; ₹120 / month per industrial unit</strong>.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <span class="font-bold text-xs text-emerald-400 uppercase block">Who Pays</span>
+            <div class="text-xl font-bold text-white">B2B SaaS License</div>
+            <p class="text-slate-300 leading-relaxed text-[11px]">
+              • Industrial Chemical & Pharma ETPs and CETP Consortiums.<br>
+              • Annual SaaS Subscription: ₹25,000 - ₹50,000 / year / plant.<br>
+              • <strong class="text-white">ROI</strong>: Avoiding a single SPCB show-cause notice, plant closure, or illegal dumping fine saves ₹5,00,000 - ₹25,00,000.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <span class="font-bold text-xs text-purple-400 uppercase block">How It Keeps Going</span>
+            <div class="text-xl font-bold text-white">Organic Expansion</div>
+            <p class="text-slate-300 leading-relaxed text-[11px]">
+              • <strong class="text-white">Self-Serve Onboarding</strong>: Plants upload their own KSPCB Consent to Operate PDF to auto-calibrate local limits.<br>
+              • <strong class="text-white">TSDF Integration</strong>: Direct partnerships with authorized disposal sites (e.g. KWMP Dabaspet).
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono text-right pt-4 border-t border-slate-800/80">Slide 9 of 11</div>
+    </section>
+
+    <!-- SLIDE 10: What's Next -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-6">
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span class="text-blue-500 font-mono">9</span> What's Next
+          </h2>
+          <span class="text-xs font-mono text-slate-400">Product Roadmap & Learnings</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <h4 class="font-bold text-sm text-blue-400">What We Build Next</h4>
+            <p class="text-slate-300 leading-relaxed">
+              1. <strong>IoT PLC Edge Agent</strong>: Modbus connection to filter press pressure switches.<br>
+              2. <strong>Automated SPCB XGN Sync</strong>: 1-click Form 4 annual return submission.<br>
+              3. <strong>Cement Kiln AFR Exchange</strong>: Circular marketplace matching low-moisture sludge with cement kilns.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <h4 class="font-bold text-sm text-emerald-400">What We Learned</h4>
+            <p class="text-slate-300 leading-relaxed">
+              • Operators reject conversational chatbots — they demand exact statutory citations [Rule 8(1), HOWM 2016] and mathematical transparency.<br>
+              • 3D spatial twin drastically speeds up root-cause diagnosis during plant shift changes.
+            </p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-slate-800/60 border border-slate-700 space-y-3">
+            <h4 class="font-bold text-sm text-purple-400">What We Need</h4>
+            <p class="text-slate-300 leading-relaxed">
+              • <strong>Pilot Deployment</strong>: Access to an operational chemical ETP or CETP facility for 30-day live field validation.<br>
+              • <strong>Cloud Credits</strong>: Multi-tenant deployment across Karnataka & Central PCB portal ingestion.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono text-right pt-4 border-t border-slate-800/80">Slide 10 of 11</div>
+    </section>
+
+    <!-- SLIDE 11: Thank You -->
+    <section class="slide hidden w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-12 shadow-2xl flex flex-col justify-between min-h-[520px]">
+      <div>
+        <h1 class="text-4xl sm:text-6xl font-extrabold text-white tracking-tight mb-4">
+          THANK YOU
+        </h1>
+        <p class="text-xl sm:text-2xl text-blue-400 font-semibold mb-6">
+          Questions & Technical Discussion
+        </p>
+        <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
+          "Transforming hazardous chemical sludge compliance from a legal liability into an automated, predictable, and sustainable industrial asset."
+        </p>
+      </div>
+
+      <div class="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row justify-between gap-4 text-xs font-mono text-slate-400">
+        <div>
+          <span class="text-slate-200 font-bold block">TEAM:</span>
+          <span>EcoStream AI · [B4K-MLR-42]</span>
+        </div>
+        <div>
+          <span class="text-slate-200 font-bold block">LIVE DEMO:</span>
+          <span class="text-blue-400">http://localhost:5173/</span>
+        </div>
+        <div>
+          <span class="text-slate-200 font-bold block">GITHUB REPO:</span>
+          <span class="text-emerald-400">https://github.com/AdarshReddy13/ETP_sludgeOps.git</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Keybinds Hint -->
+  <footer class="no-print h-10 bg-slate-900 border-t border-slate-800/60 px-6 flex items-center justify-between text-[11px] font-mono text-slate-500">
+    <div>Use <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300">←</kbd> and <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300">→</kbd> or <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300">Space</kbd> to navigate slides</div>
+    <div>ETP SludgeOps · Ready for Jury Evaluation</div>
+  </footer>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    let currentSlide = 0;
+
+    function showSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= slides.length) index = slides.length - 1;
+      currentSlide = index;
+
+      slides.forEach((s, idx) => {
+        if (idx === currentSlide) {
+          s.classList.remove('hidden');
+          s.classList.add('flex');
+        } else {
+          s.classList.add('hidden');
+          s.classList.remove('flex');
+        }
+      });
+
+      document.getElementById('slideCounter').innerText = `${currentSlide + 1} / ${slides.length}`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < slides.length - 1) showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) showSlide(currentSlide - 1);
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'Space' || e.key === 'PageDown') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    });
+  </script>
+</body>
+</html>
